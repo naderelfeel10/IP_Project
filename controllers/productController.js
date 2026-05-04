@@ -259,3 +259,28 @@ exports.getCategory = async(req, res)=>{
 
 
 }
+exports.rateProduct = async (req, res) => {
+    try {
+        const productId = req.params.id;
+        const {rating} = req.body; 
+
+        if (!rating ||rating < 1 || rating > 5) {
+            return res.status(400).json({ success: false, message: "invalid rating" });
+        }
+
+        const product = await productModel.findById(productId);
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
+
+        const oldTotalPoints = product.avgRate * product.numberOfRating;
+        const newNumberOfRating = product.numberOfRating + 1;
+        const newAvgRate = (oldTotalPoints + rating) / newNumberOfRating;
+
+        await productModel.updateOne({ _id: productId }, {$set: { avgRate: newAvgRate },$inc: { numberOfRating: 1 }});
+        res.status(200).json({ success: true, message: "Product rated successfully", newRating: newAvgRate });
+
+    } catch (err) {
+        return res.status(500).json({ success: false, message: `Server error: ${err.message}` });
+    }
+};

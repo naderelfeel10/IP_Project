@@ -19,5 +19,7 @@ router.get('/categories/:cat_name', productController.getCategory);
 router.get('/my-products/', AutoMiddleware.authMiddleWare,productController.getMyProducts);
 router.get('/getSellerProducts/:id', productController.getSellerProducts);
 
+router.post('/rateProduct/:id',  AutoMiddleware.authMiddleWare,productController.rateProduct);
+
 
 module.exports = router;
