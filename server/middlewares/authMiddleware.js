@@ -1,42 +1,31 @@
-const jwt =require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 
-
-const authMiddleWare = (req,res,next)=>{
-    //console.log("all headers : ",req.headers)
-    //console.log("Cookies parsed:", req.cookies);
+const authMiddleWare = (req, res, next) => {
     const cookieAuth = req.cookies.Authorization;
+    const headerAuth = req.headers.authorization;
+    const authValue = cookieAuth || headerAuth;
 
-    console.log(cookieAuth)
-
-
-    if (!cookieAuth || !cookieAuth.startsWith('Bearer ')) {
-      return res.status(401).json({"success":"false",message:"Unauthorized"});
-    }
-  
-    const token = cookieAuth.split(' ')[1];
-    if(!token){
-        return res.status(401).json({"success":"false",message:"login first"});
+    if (!authValue || !authValue.startsWith('Bearer ')) {
+        return res.status(401).json({ success: false, message: 'login first' });
     }
 
-    console.log(token);  
-    console.log("auth middleware is called");
+    const token = authValue.split(' ')[1];
 
-
-    try{
-        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-        let decodedTokenInfo
-
-        decodedTokenInfo = jwt.verify(token,"elfeel")
-        console.log(decodedTokenInfo)
+    try {
+        const decodedTokenInfo = jwt.verify(token, process.env.JWT_SECRET);
         req.userInfo = decodedTokenInfo;
-        console.log('done')
         next();
-
-    }catch(e){
-        return res.status(401).json({"success":false,message:"invalid jwt token"})
+    } catch (e) {
+        return res.status(401).json({ success: false, message: 'invalid jwt token' });
     }
-}
+};
 
+const sellerOnly = (req, res, next) => {
+    if (req.userInfo.type !== 'sellerAccount') {
+        return res.status(403).json({ success: false, message: 'seller account only' });
+    }
 
+    next();
+};
 
-module.exports = {authMiddleWare};
+module.exports = { authMiddleWare, sellerOnly };
