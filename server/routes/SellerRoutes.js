@@ -4,6 +4,7 @@ const router = express.Router();
 
 
 
+router.get('/getAllSellers',SellerController.getAllSellers);
 router.get('/getProfile/',SellerController.getProfile);
 router.get('/getSellerStore',SellerController.getSellerStore);
 router.patch('/flagBuyer/',SellerController.flagBuyer);

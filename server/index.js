@@ -71,8 +71,8 @@ ConnectedDB();
 
 
 app.use("/auth",authRoute);
-app.use("/products",productRoute);
-app.use("/orders",reviewRoute,orderRoute);
+app.use("/products",productRoute,reviewRoute);
+app.use("/orders",orderRoute);
 app.use("/cart",cartRoute);
 
 

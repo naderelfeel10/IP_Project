@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import API from '../api';
 import './Auth.css';
 
@@ -17,10 +18,12 @@ function SignUp({ onSwitchToSignIn }) {
             await API.post('/auth/createAccount', {
                 email, password, username, type: 'buyerAccount'
             });
-            alert('Account created! Please sign in.');
+            toast.success('Account created. Please sign in.');
             onSwitchToSignIn();
         } catch (err) {
-            setError(err.response?.data?.message || 'Something went wrong');
+            const message = err.response?.data?.message || 'Something went wrong';
+            setError(message);
+            toast.error(message);
         } finally {
             setLoading(false);
         }
@@ -29,7 +32,7 @@ function SignUp({ onSwitchToSignIn }) {
     return (
         <div className="auth-page">
             <div className="auth-card">
-                <h2>Create account</h2>
+                <h2>Create Buyer App account</h2>
                 {error && <p className="auth-error">{error}</p>}
                 <label className="auth-label">Username</label>
                 <input type="text" placeholder="Your name" required

@@ -1,5 +1,6 @@
 import { getAuthPayload, getAuthUser } from '../auth';
 import MainNav from '../components/MainNav';
+import './UserProfilePage.css';
 
 function UserProfilePage() {
     const user = getAuthUser();

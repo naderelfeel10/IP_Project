@@ -34,6 +34,7 @@ module.exports = {
                         enum: ["PC", "Electronics", "Health", "Games", "Tools"]
                     },
                     stock: { type: "number" },
+                    avgRating: { type: "number" },
                     deliveryTimeEstimate: { type: "string" },
                     createdAt: { type: "string", format: "date-time" },
                     updatedAt: { type: "string", format: "date-time" }
@@ -63,13 +64,87 @@ module.exports = {
             },
             OrderInput: {
                 type: "object",
-                required: ["itemList", "shippingAddress"],
+                required: ["itemList"],
                 properties: {
                     itemList: {
                         type: "array",
                         items: { $ref: "#/components/schemas/OrderItem" }
                     },
-                    shippingAddress: { type: "string" }
+                    shippingAddress: { type: "string" },
+                    buyerComment: { type: "string" },
+                    stockAlreadyReserved: { type: "boolean" }
+                }
+            },
+            Order: {
+                type: "object",
+                properties: {
+                    _id: { type: "string" },
+                    buyerId: { type: "string" },
+                    itemsList: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/OrderItem" }
+                    },
+                    totalPrice: { type: "number" },
+                    shippingAddress: { type: "string" },
+                    buyerComment: { type: "string" },
+                    status: { type: "string", enum: ["Pending", "Shipped", "Delivered", "Cancelled"] },
+                    createdAt: { type: "string", format: "date-time" },
+                    updatedAt: { type: "string", format: "date-time" }
+                }
+            },
+            FlagInput: {
+                type: "object",
+                required: ["issueScope", "issueDescription"],
+                properties: {
+                    issueScope: { type: "string", enum: ["Order", "Product", "Seller"] },
+                    issueDescription: { type: "string" },
+                    productId: { type: "string" }
+                }
+            },
+            Flag: {
+                type: "object",
+                properties: {
+                    _id: { type: "string" },
+                    userId: { type: "string" },
+                    orderId: { type: "string" },
+                    productId: { type: "string" },
+                    sellerId: { type: "string" },
+                    issueScope: { type: "string", enum: ["Order", "Product", "Seller"] },
+                    issueDescription: { type: "string" },
+                    status: { type: "string", enum: ["Open", "Resolved"] },
+                    createdAt: { type: "string", format: "date-time" },
+                    updatedAt: { type: "string", format: "date-time" }
+                }
+            },
+            CartInput: {
+                type: "object",
+                required: ["productId", "quantity"],
+                properties: {
+                    productId: { type: "string" },
+                    quantity: { type: "number", default: 1, minimum: 1 }
+                }
+            },
+            Cart: {
+                type: "object",
+                properties: {
+                    _id: { type: "string" },
+                    buyerId: { type: "string" },
+                    itemsList: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/OrderItem" }
+                    },
+                    totalPrice: { type: "number" },
+                    createdAt: { type: "string", format: "date-time" },
+                    updatedAt: { type: "string", format: "date-time" }
+                }
+            },
+            ReviewInput: {
+                type: "object",
+                required: ["productId", "rating"],
+                properties: {
+                    productId: { type: "string" },
+                    rating: { type: "number", minimum: 1, maximum: 5 },
+                    commentText: { type: "string" }
                 }
             },
             AuthSignupInput: {
@@ -395,6 +470,48 @@ module.exports = {
                 }
             }
         },
+        "/orders/progressOrder/{id}": {
+            patch: {
+                tags: ["Orders"],
+                summary: "Progress an order to the next status",
+                description: "Moves Pending to Shipped, and Shipped to Delivered. Delivered and Cancelled orders cannot progress.",
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: "id", in: "path", required: true, schema: { type: "string" } }
+                ],
+                responses: {
+                    200: { description: "Order status progressed" },
+                    400: { description: "Order cannot progress from current status" },
+                    403: { description: "Not a buyer or not order owner" },
+                    404: { description: "Order not found" }
+                }
+            }
+        },
+        "/orders/reportIssue/{id}": {
+            post: {
+                tags: ["Orders"],
+                summary: "Report an issue for an order",
+                description: "Creates a flag for an admin to review. The issue can describe the whole order, a specific product, or the seller connected to a selected product.",
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: "id", in: "path", required: true, schema: { type: "string" } }
+                ],
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/FlagInput" }
+                        }
+                    }
+                },
+                responses: {
+                    201: { description: "Issue reported" },
+                    400: { description: "Invalid issue details" },
+                    403: { description: "Not a buyer or not order owner" },
+                    404: { description: "Order not found" }
+                }
+            }
+        },
         "/orders/removeOrder/{id}": {
             delete: {
                 tags: ["Orders"],
@@ -435,6 +552,18 @@ module.exports = {
                 }
             }
         },
+        "/orders/getAllOrders/": {
+            get: {
+                tags: ["Orders"],
+                summary: "Get all orders for the logged-in buyer",
+                description: "Returns the logged-in buyer's orders with product details populated.",
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: { description: "Buyer orders" },
+                    403: { description: "User must be a buyer" }
+                }
+            }
+        },
         "/orders/myOrders/{status}/": {
             get: {
                 tags: ["Orders"],
@@ -449,7 +578,7 @@ module.exports = {
                 }
             }
         },
-        "/orders/getComment/{id}": {
+        "/products/getComment/{id}": {
             get: {
                 tags: ["Reviews"],
                 summary: "Get comment/review",
@@ -460,23 +589,94 @@ module.exports = {
                 responses: { 501: { description: "Not implemented" } }
             }
         },
-        "/orders/addComment/": {
+        "/products/getReviewsByProduct/{productId}": {
+            get: {
+                tags: ["Reviews"],
+                summary: "Get reviews for a product",
+                parameters: [
+                    { name: "productId", in: "path", required: true, schema: { type: "string" } }
+                ],
+                responses: {
+                    200: { description: "Product reviews" },
+                    500: { description: "Server error" }
+                }
+            }
+        },
+        "/products/myReviews": {
+            get: {
+                tags: ["Reviews"],
+                summary: "Get reviews written by the logged-in buyer",
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: { description: "Buyer reviews" },
+                    403: { description: "User must be a buyer" },
+                    500: { description: "Server error" }
+                }
+            }
+        },
+        "/products/getReviewSummary/{productId}": {
+            get: {
+                tags: ["Reviews"],
+                summary: "Summarize reviews for a product with Google GenAI",
+                description: "Fetches product reviews and sends them to Google GenAI. Requires GEMINI_API_KEY or GOOGLE_API_KEY in the server environment.",
+                parameters: [
+                    { name: "productId", in: "path", required: true, schema: { type: "string" } }
+                ],
+                responses: {
+                    200: { description: "AI review summary" },
+                    400: { description: "Invalid product id" },
+                    404: { description: "Product not found" },
+                    500: { description: "Server error or missing Google API key" }
+                }
+            }
+        },
+        "/products/addComment/": {
             post: {
                 tags: ["Reviews"],
                 summary: "Add comment/review",
-                description: "Endpoint exists, but the controller is currently empty.",
-                responses: { 501: { description: "Not implemented" } }
+                description: "Creates a review for the logged-in buyer and recalculates the product average rating. The buyer must have a delivered order containing the product.",
+                security: [{ cookieAuth: [] }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/ReviewInput" }
+                        }
+                    }
+                },
+                responses: {
+                    201: { description: "Review added" },
+                    400: { description: "Missing or invalid review data" },
+                    403: { description: "User must be a buyer or product is not in a delivered order" },
+                    404: { description: "Product not found" },
+                    500: { description: "Server error" }
+                }
             }
         },
-        "/orders/updateComment/": {
+        "/products/updateComment/": {
             put: {
                 tags: ["Reviews"],
                 summary: "Update comment/review",
-                description: "Endpoint exists, but the controller is currently empty.",
-                responses: { 501: { description: "Not implemented" } }
+                description: "Updates the logged-in buyer's review for a delivered product.",
+                security: [{ cookieAuth: [] }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/ReviewInput" }
+                        }
+                    }
+                },
+                responses: {
+                    200: { description: "Review updated" },
+                    400: { description: "Missing or invalid review data" },
+                    403: { description: "User must be a buyer or product is not in a delivered order" },
+                    404: { description: "Review or product not found" },
+                    500: { description: "Server error" }
+                }
             }
         },
-        "/orders/removeComment/": {
+        "/products/removeComment/": {
             delete: {
                 tags: ["Reviews"],
                 summary: "Remove comment/review",
@@ -488,24 +688,86 @@ module.exports = {
             get: {
                 tags: ["Cart"],
                 summary: "Get cart",
-                description: "Endpoint exists, but the controller is currently empty.",
-                responses: { 501: { description: "Not implemented" } }
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: { description: "Current buyer cart" },
+                    403: { description: "User must be a buyer" }
+                }
             }
         },
-        "/cart/createCart/": {
+        "/cart/addItem/": {
             post: {
                 tags: ["Cart"],
-                summary: "Create cart",
-                description: "Endpoint exists, but the controller is currently empty.",
-                responses: { 501: { description: "Not implemented" } }
+                summary: "Add a product to the current buyer cart",
+                description: "Uses the Authorization cookie. Creates a cart for the buyer if one does not exist and reserves stock by decrementing product stock.",
+                security: [{ cookieAuth: [] }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/CartInput" }
+                        }
+                    }
+                },
+                responses: {
+                    200: { description: "Product added to cart" },
+                    400: { description: "Missing fields or insufficient stock" },
+                    403: { description: "User must be a buyer" },
+                    404: { description: "Product not found" }
+                }
             }
         },
         "/cart/clearCart/": {
             delete: {
                 tags: ["Cart"],
                 summary: "Clear cart",
-                description: "Endpoint exists, but the controller is currently empty.",
-                responses: { 501: { description: "Not implemented" } }
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: { description: "Cart cleared" },
+                    403: { description: "User must be a buyer" }
+                }
+            }
+        },
+        "/cart/decrementItem/{productId}": {
+            patch: {
+                tags: ["Cart"],
+                summary: "Decrease one cart item quantity",
+                description: "Decreases the selected cart item by one and restores one unit to product stock. Removes the item if its quantity reaches zero.",
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: "productId", in: "path", required: true, schema: { type: "string" } }
+                ],
+                responses: {
+                    200: { description: "Cart item quantity updated" },
+                    403: { description: "User must be a buyer" },
+                    404: { description: "Cart or cart item not found" }
+                }
+            }
+        },
+        "/cart/removeItem/{productId}": {
+            delete: {
+                tags: ["Cart"],
+                summary: "Remove one product from the current buyer cart",
+                description: "Removes the cart item and restores the removed quantity to product stock.",
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: "productId", in: "path", required: true, schema: { type: "string" } }
+                ],
+                responses: {
+                    200: { description: "Product removed from cart" },
+                    403: { description: "User must be a buyer" },
+                    404: { description: "Cart or cart item not found" }
+                }
+            }
+        },
+        "/buyer/getAllBuyers": {
+            get: {
+                tags: ["Buyer"],
+                summary: "Get all buyer accounts",
+                responses: {
+                    200: { description: "Buyer list" },
+                    500: { description: "Server error" }
+                }
             }
         },
         "/buyer/getProfile/": {
@@ -530,6 +792,16 @@ module.exports = {
                 summary: "Flag a seller",
                 description: "Endpoint exists, but the controller is currently empty.",
                 responses: { 501: { description: "Not implemented" } }
+            }
+        },
+        "/seller/getAllSellers": {
+            get: {
+                tags: ["Seller"],
+                summary: "Get all seller accounts",
+                responses: {
+                    200: { description: "Seller list" },
+                    500: { description: "Server error" }
+                }
             }
         },
         "/seller/getProfile/": {

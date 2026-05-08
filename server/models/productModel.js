@@ -29,6 +29,12 @@ const ProductSchema = mongoose.Schema({
         default: 100,
         min: 0 
     },
+    avgRating: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 5
+    },
     deliveryTimeEstimate: { type: String, required: true } 
 },{timestamps:true});
 

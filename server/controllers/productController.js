@@ -182,7 +182,7 @@ exports.getProduct = async(req, res)=>{
 
 exports.browseCatalog = async(req, res)=>{
     try{
-        const products_catalog = await productModel.find().select('name price category');
+        const products_catalog = await productModel.find().select('name price category avgRating');
         res.status(200).json({success:true, result:products_catalog})
     }catch(err){
             return res.status(501).json({success:false, message:`server error${err}`});

@@ -1,5 +1,5 @@
 {
-  "name": "seller",
+  "name": "buyer-app",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -13,6 +13,7 @@
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2",
     "react-scripts": "5.0.1",
+    "sonner": "^2.0.7",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

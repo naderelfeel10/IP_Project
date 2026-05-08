@@ -8,9 +8,12 @@ const router = express.Router();
 router.get('/getOrder/:id',authMiddleware.authMiddleWare, orderController.getOrder);
 router.post('/addOrder/',authMiddleware.authMiddleWare,orderController.addOrder);
 router.put('/updateOrder/:id',authMiddleware.authMiddleWare,orderController.updateOrder);
+router.patch('/progressOrder/:id',authMiddleware.authMiddleWare,orderController.progressOrderStatus);
+router.post('/reportIssue/:id',authMiddleware.authMiddleWare,orderController.reportIssue);
 
 router.delete('/removeOrder/:id',authMiddleware.authMiddleWare,orderController.removeOrder);
 router.get('/traceOrder/:id',authMiddleware.authMiddleWare,orderController.traceOrder);
+router.get('/getAllOrders/',authMiddleware.authMiddleWare, orderController.getAllOrders);
 router.get('/myOrders/',authMiddleware.authMiddleWare, orderController.getBuyerOrders);
 
 router.get('/myOrders/:status/',authMiddleware.authMiddleWare, orderController.getSellerOrdersBasedonStatus);

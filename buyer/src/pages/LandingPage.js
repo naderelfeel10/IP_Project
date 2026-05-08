@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Button, Input, Select } from 'antd';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import API from '../api';
 import MainNav from '../components/MainNav';
+import './Products.css';
 
 const CATEGORY_OPTIONS = ['PC', 'Electronics', 'Health', 'Games', 'Tools'];
 
 const groupProductsByCategory = (products) => {
-    return products.reduce((groups, product) => {
+    const groups = {};
+
+    products.forEach((product) => {
         const category = product.category || 'Other';
 
         if(!groups[category]){
@@ -15,8 +18,23 @@ const groupProductsByCategory = (products) => {
         }
 
         groups[category].push(product);
-        return groups;
-    }, {});
+    });
+
+    return groups;
+};
+
+const getSellerId = (product) => {
+    if(!product.sellerId){
+        return '';
+    }
+
+    return typeof product.sellerId === 'object' ? product.sellerId._id : product.sellerId;
+};
+
+const formatRating = (rating) => {
+    return rating ? (
+        <span className="rating-value"><span aria-hidden="true">★</span> {rating}/5</span>
+    ) : 'No rating yet';
 };
 
 function LandingPage() {
@@ -32,6 +50,7 @@ function LandingPage() {
         priceFrom: priceFromFilter,
         priceUpTo: priceUpToFilter
     });
+    const [sellersById, setSellersById] = useState({});
     const [products, setProducts] = useState([]);
     const [productsByCategory, setProductsByCategory] = useState({});
     const [selectedCategory, setSelectedCategory] = useState('');
@@ -40,6 +59,24 @@ function LandingPage() {
     const [categoryLoading, setCategoryLoading] = useState(false);
     const [error, setError] = useState('');
     const [categoryError, setCategoryError] = useState('');
+
+    useEffect(() => {
+        const loadSellers = async () => {
+            try {
+                const res = await API.get('/seller/getAllSellers');
+                const sellersMap = (res.data.result || []).reduce((map, seller) => {
+                    map[seller._id] = seller.username || seller.email || 'Seller';
+                    return map;
+                }, {});
+
+                setSellersById(sellersMap);
+            } catch (err) {
+                setSellersById({});
+            }
+        };
+
+        loadSellers();
+    }, []);
 
     useEffect(() => {
         const loadProducts = async () => {
@@ -139,6 +176,20 @@ function LandingPage() {
         setSearchParams(search ? { search } : {});
     };
 
+    const renderSellerLink = (product) => {
+        const sellerId = getSellerId(product);
+
+        if(!sellerId){
+            return <span className="seller-link muted">Unknown seller</span>;
+        }
+
+        return (
+            <Link className="seller-link" onClick={(event) => event.stopPropagation()} to={`/seller/${sellerId}`}>
+                {sellersById[sellerId] || 'Seller'}
+            </Link>
+        );
+    };
+
     return (
         <main className="page-shell">
             <MainNav />
@@ -160,14 +211,15 @@ function LandingPage() {
                         {!categoryLoading && !categoryError && categoryProducts.length > 0 && (
                             <div className="product-list">
                                 {categoryProducts.map((product) => (
-                                    <article className="product-list-item" key={product._id}>
-                                        <div>
-                                            <h3>{product.name}</h3>
-                                            <p>{product.description || 'No description available.'}</p>
-                                            <span>{product.deliveryTimeEstimate || 'Delivery time unavailable'}</span>
-                                        </div>
+                                    <Link className="product-list-item product-clickable" key={product._id} to={`/products/${product._id}`}>
+                                            <div>
+                                                <h3>{product.name}</h3>
+                                                {renderSellerLink(product)}
+                                                <p>{product.description || 'No description available.'}</p>
+                                                <span>{product.deliveryTimeEstimate || 'Delivery time unavailable'} · {formatRating(product.avgRating)}</span>
+                                            </div>
                                         <strong>{product.price} EGP</strong>
-                                    </article>
+                                    </Link>
                                 ))}
                             </div>
                         )}
@@ -196,12 +248,22 @@ function LandingPage() {
                                 />
                             </label>
                             <label>
-                                Seller ID
-                                <Input
-                                    onChange={(e) => updateFilter('seller', e.target.value)}
-                                    onPressEnter={() => applyFilters()}
-                                    placeholder="Seller id"
-                                    value={filterValues.seller}
+                                Seller
+                                <Select
+                                    allowClear
+                                    onChange={(value) => {
+                                        const seller = value || '';
+                                        updateFilter('seller', seller);
+                                        applyFilters({ seller });
+                                    }}
+                                    options={Object.entries(sellersById).map(([sellerId, sellerName]) => ({
+                                        label: sellerName,
+                                        value: sellerId
+                                    }))}
+                                    placeholder="Any seller"
+                                    showSearch
+                                    optionFilterProp="label"
+                                    value={filterValues.seller || undefined}
                                 />
                             </label>
                             <label>
@@ -237,14 +299,15 @@ function LandingPage() {
                             {!loading && !error && products.length > 0 && (
                                 <div className="product-list">
                                     {products.map((product) => (
-                                        <article className="product-list-item" key={product._id}>
+                                        <Link className="product-list-item product-clickable" key={product._id} to={`/products/${product._id}`}>
                                             <div>
                                                 <h3>{product.name}</h3>
+                                                {renderSellerLink(product)}
                                                 <p>{product.description || 'No description available.'}</p>
-                                                <span>{product.category || 'Other'} · {product.deliveryTimeEstimate || 'Delivery time unavailable'}</span>
+                                                <span>{product.category || 'Other'} · {product.deliveryTimeEstimate || 'Delivery time unavailable'} · {formatRating(product.avgRating)}</span>
                                             </div>
                                             <strong>{product.price} EGP</strong>
-                                        </article>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
@@ -262,14 +325,18 @@ function LandingPage() {
                         </div>
                         <div className="product-grid">
                             {productsByCategory[category].map((product) => (
-                                <article className="product-card" key={product._id}>
+                                <Link className="product-card product-clickable" key={product._id} to={`/products/${product._id}`}>
                                     <h3>{product.name}</h3>
+                                    {renderSellerLink(product)}
                                     <p>{product.description || 'No description available.'}</p>
                                     <div className="product-meta">
                                         <span>{product.deliveryTimeEstimate || 'Delivery time unavailable'}</span>
                                         <strong>{product.price} EGP</strong>
                                     </div>
-                                </article>
+                                    <div className="product-meta seller-product-meta">
+                                        <span>{formatRating(product.avgRating)}</span>
+                                    </div>
+                                </Link>
                             ))}
                         </div>
                     </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import API from '../api';
 import { saveAuthToken } from '../auth';
 import './Auth.css';
@@ -17,10 +18,12 @@ function SignIn({ onSignedIn, onSwitchToSignUp }) {
             const res = await API.post('/auth/signin', { email, password });
             console.log(res.data);
             saveAuthToken(res.data.token);
-            alert('Signed in successfully!');
+            toast.success('Signed in successfully');
             onSignedIn();
         } catch (err) {
-            setError(err.response?.data?.message || 'Something went wrong');
+            const message = err.response?.data?.message || 'Something went wrong';
+            setError(message);
+            toast.error(message);
         } finally {
             setLoading(false);
         }
@@ -29,7 +32,7 @@ function SignIn({ onSignedIn, onSwitchToSignUp }) {
     return (
         <div className="auth-page">
             <div className="auth-card">
-                <h2>Seller sign in</h2>
+                <h2>Buyer App sign in</h2>
                 {error && <p className="auth-error">{error}</p>}
                 <label className="auth-label">Email</label>
                 <input type="email" placeholder="you@email.com" required
@@ -41,7 +44,7 @@ function SignIn({ onSignedIn, onSwitchToSignUp }) {
                     {loading ? 'Signing in...' : 'Sign in'}
                 </button>
                 <p className="auth-switch" onClick={onSwitchToSignUp}>
-                    New seller? Create an account
+                    New to Buyer App? Create an account
                 </p>
             </div>
         </div>
