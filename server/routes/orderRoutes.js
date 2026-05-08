@@ -1,21 +1,15 @@
-// const express = require('express')
-// const orderController = require('../controllers/orderController')
-// const router = express.Router();
+const express = require('express');
+const orderController = require('../controllers/orderController');
+const { authMiddleWare, sellerOnly } = require('../middlewares/authMiddleware');
 
+const router = express.Router();
 
+router.post('/addOrder', authMiddleWare, orderController.addOrder);
+router.get('/myOrders', authMiddleWare, sellerOnly, orderController.getSellerOrders);
+router.get('/myOrders/:type', authMiddleWare, sellerOnly, orderController.getSellerOrdersBasedonType);
+router.get('/getOrder/:id', authMiddleWare, sellerOnly, orderController.getOrder);
+router.get('/traceOrder/:id', authMiddleWare, orderController.traceOrder);
+router.put('/updateOrder/:id', authMiddleWare, sellerOnly, orderController.updateOrder);
+router.delete('/removeOrder/:id', authMiddleWare, sellerOnly, orderController.removeOrder);
 
-// router.get('/getOrder/:id',orderController.getOrder);
-// router.post('/addOrder/',orderController.addOrder);
-// router.put('/updateOrder/',orderController.updateOrder);
-
-// router.delete('/removeOrder/',orderController.removeOrder);
-// router.patch('/flagOrder/',orderController.flagOrder);
-// router.get('/traceOrder/',orderController.traceOrder);
-
-// router.get('/myOrders/',orderController.getSellerOrders);
-
-// router.get('/myOrders/:type/',orderController.getSellerOrdersBasedonType);
-
-
-
-// module.exports = router;
+module.exports = router;
