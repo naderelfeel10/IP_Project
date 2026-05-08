@@ -2,8 +2,9 @@ const jwt =require('jsonwebtoken');
 
 
 const authMiddleWare = (req,res,next)=>{
+    console.log("middleware is called")
     //console.log("all headers : ",req.headers)
-    //console.log("Cookies parsed:", req.cookies);
+    console.log("Cookies parsed:", req.cookies);
     const cookieAuth = req.cookies.Authorization;
 
     console.log(cookieAuth)

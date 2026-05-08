@@ -23,7 +23,20 @@ const ProductSchema = mongoose.Schema({
         type:String,
         enum:['PC','Electronics','Health','Games','Tools']
     },
+    stock: {
+        type: Number,
+        required: false,
+        default: 100,
+        min: 0 
+    },
+    avgRating: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 5
+    },
     deliveryTimeEstimate: { type: String, required: true } 
 },{timestamps:true});
+
 
 module.exports = mongoose.model('Product',ProductSchema);

@@ -1,6 +1,6 @@
 
-/*const { Timestamp } = require('bson');
-const { bool } = require('joi');*/
+const { Timestamp } = require('bson');
+const { bool } = require('joi');
 const mongoose = require('mongoose');
 
 
@@ -44,7 +44,7 @@ const userSchema = mongoose.Schema({
 	}
 },
     {
-        timestamps:true,
+        Timestamps:true,
     }
 
 )

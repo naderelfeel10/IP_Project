@@ -20,7 +20,7 @@ exports.createAccount = async (req,res)=>{
 
 	if(error){
 		return res.status(401).json({success:false,
-			 message:"Error in validating signing up",error:error.details[0].message});
+			 message:"error in validating signing up",error:error.details[0].message});
 	}
 
 	const existingUser = await userModel.findOne({email});
@@ -45,17 +45,18 @@ exports.createAccount = async (req,res)=>{
 		const result = await newUser.save();
 		console.log(newUser)
 
-		return res.status(200).json({success:true,message:"Done signing up"})
+		return res.status(200).json({succuss:true,message:"done signing up"})
 	 }
 
 
 }
 
 exports.signin = async (req,res)=>{
-	const {email,password} = req.body;
-        
-	const existingUser = await userModel.findOne({email}).select("+password");
+	console.log(req.body);
 
+	const {email,password} = req.body;
+    
+	const existingUser = await userModel.findOne({email}).select("+password");
      if(existingUser){
 
 		const result = await doPassValidation(password,existingUser.password)
@@ -68,6 +69,7 @@ exports.signin = async (req,res)=>{
 				username:existingUser.username,
 				type:existingUser.type,
 				
+				
 			},"elfeel",
 			{
 				expiresIn:"80h"
@@ -79,19 +81,20 @@ exports.signin = async (req,res)=>{
 		return res.cookie("Authorization", "Bearer " + token, {
 			expires: new Date(Date.now() + 80 * 3600000),
 			httpOnly: true,
-			secure: true
+			secure: false,
+			sameSite: "lax"
 		  }).json({
 			success: true,
 			token,
-			message: "Signed in successfully",
+			message: "signed in successfully",
 		  });
 		  			
 		}else{
-			return res.status(401).json({message:"Username or password is incorrect"})
+			return res.status(401).json({message:"username or password is not correct"})
 		}
 
 	 }else{
-     	return res.status(401).json({message:"User not found"})
+     	return res.status(401).json({message:"user is not found"})
 	 }
 	 
 	

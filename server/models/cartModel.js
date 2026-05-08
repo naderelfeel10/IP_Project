@@ -1,6 +1,4 @@
 
-const { Timestamp } = require('bson');
-const { bool } = require('joi');
 const mongoose = require('mongoose')
 
 
@@ -27,4 +25,4 @@ const cartSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 
-const Order = mongoose.model('Cart', cartSchema);
+module.exports = mongoose.model('Cart', cartSchema);

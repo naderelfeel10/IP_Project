@@ -1,22 +1,17 @@
-const express = require('express');
-const { 
-    createAccount, 
-    signin, 
-    activateAccount, 
-    changePassword, 
-    updateEmail, 
-    deleteAccount 
-} = require('../controllers/authController');
-
+const express = require('express')
+const authController = require('../controllers/authController')
 const router = express.Router();
 
-router.post('/createAccount', createAccount);
-router.post('/signin', signin);
 
-router.patch('/activateAccount', activateAccount);
-router.patch('/changePassword', changePassword);
-router.patch('/updateEmail', updateEmail);
 
-router.delete('/deleteAccount', deleteAccount);
+router.post('/createAccount',authController.createAccount);
+router.post('/signin',authController.signin);
+router.post('/sginin',authController.signin);
+
+router.patch('/activateAccount',authController.activateAccount);
+router.patch('/changePasword',authController.changePassword);
+router.patch('/updateEmail',authController.updateEmail);
+
+router.delete('/deleteAccount',authController.deleteAccount);
 
 module.exports = router;
