@@ -1,7 +1,4 @@
-
-const { Timestamp } = require('bson');
-const { bool } = require('joi');
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
     
@@ -25,11 +22,21 @@ const orderSchema = new mongoose.Schema({
     shippingAddress:{
         type:String
     },
+    orderComment:{
+        type:String
+    },
     status: { 
         type: String, 
-        enum: ['Pending', 'Shipped', 'Delivered', 'Cancelled'], 
+        enum: ['Pending', 'Accepted', 'Preparing', 'Out for delivery', 'Delivered', 'Cancelled', 'Failed delivery'], 
         default: 'Pending' 
-    }
+    },
+    statusHistory:[{
+        status:String,
+        date:{
+            type:Date,
+            default:Date.now
+        }
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

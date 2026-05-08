@@ -1,111 +1,120 @@
-const jwt = require("jsonwebtoken")
-const {signupSchema} = require('../middlewares/validator');
-
-const {doHash,doPassValidation} = require("../utils/hashing");
-
+const jwt = require('jsonwebtoken');
+const { signupSchema } = require('../middlewares/validator');
+const { doHash, doPassValidation } = require('../utils/hashing');
 const userModel = require('../models/usersModel');
 
+exports.createAccount = async (req, res) => {
+    try {
+        const email = req.body.email;
+        const password = req.body.password;
+        const username = req.body.username;
+        const type = req.body.type || 'sellerAccount';
+        const storeName = req.body.storeName;
+        const phone = req.body.phone;
+        const address = req.body.address;
 
+        const { error } = signupSchema.validate({ email, password });
 
-exports.createAccount = async (req,res)=>{
+        if (error) {
+            return res.status(401).json({
+                success: false,
+                message: error.details[0].message
+            });
+        }
 
-	const email = req.body.email;
-	const password = req.body.password;
-	const username = req.body.username;
-	const type = req.body.type;
+        const existingUser = await userModel.findOne({ email });
 
-    console.log(req.body)
+        if (existingUser) {
+            return res.status(401).json({ success: false, message: 'user already exists' });
+        }
 
-	const {error,value} = signupSchema.validate({email,password});
+        const hashedPassword = await doHash(password, 12);
 
-	if(error){
-		return res.status(401).json({success:false,
-			 message:"Error in validating signing up",error:error.details[0].message});
-	}
+        const newUser = new userModel({
+            email: email,
+            password: hashedPassword,
+            username: username,
+            type: type,
+            storeName: storeName,
+            phone: phone,
+            address: address,
+            isActive: true
+        });
 
-	const existingUser = await userModel.findOne({email});
+        await newUser.save();
 
-	if(existingUser){
-		return res.status(401).json({success:false, message:"user already exists"});
-	}
+        return res.status(201).json({ success: true, message: 'Done signing up' });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
 
-	else{
+exports.signin = async (req, res) => {
+    try {
+        const email = req.body.email;
+        const password = req.body.password;
 
-		const hashedPassword = await doHash(password,12);
-		console.log(password);
-		console.log(hashedPassword)
+        const existingUser = await userModel.findOne({ email }).select('+password');
 
-		const newUser= new userModel({
-			email:email,
-			password:hashedPassword,
-            username:username,
-			type:type
-		})
+        if (!existingUser) {
+            return res.status(401).json({ success: false, message: 'User not found' });
+        }
 
-		const result = await newUser.save();
-		console.log(newUser)
+        const result = await doPassValidation(password, existingUser.password);
 
-		return res.status(200).json({success:true,message:"Done signing up"})
-	 }
+        if (!result) {
+            return res.status(401).json({ success: false, message: 'Email or password is incorrect' });
+        }
 
+        const token = jwt.sign({
+            userId: existingUser._id,
+            email: existingUser.email,
+            username: existingUser.username,
+            type: existingUser.type
+        }, process.env.JWT_SECRET, {
+            expiresIn: '80h'
+        });
 
-}
+        return res.cookie('Authorization', 'Bearer ' + token, {
+            expires: new Date(Date.now() + 80 * 3600000),
+            httpOnly: true,
+            secure: false,
+            sameSite: 'lax'
+        }).json({
+            success: true,
+            token: token,
+            user: {
+                _id: existingUser._id,
+                email: existingUser.email,
+                username: existingUser.username,
+                type: existingUser.type,
+                storeName: existingUser.storeName,
+                phone: existingUser.phone,
+                address: existingUser.address
+            },
+            message: 'Signed in successfully'
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
 
-exports.signin = async (req,res)=>{
-	const {email,password} = req.body;
-        
-	const existingUser = await userModel.findOne({email}).select("+password");
+exports.logout = async (req, res) => {
+    return res.clearCookie('Authorization').json({ success: true, message: 'logged out' });
+};
 
-     if(existingUser){
+exports.activateAccount = async (req, res) => {
+    res.json({ success: true, message: 'activate account route' });
+};
 
-		const result = await doPassValidation(password,existingUser.password)
-		console.log(result)
+exports.changePassword = async (req, res) => {
+    res.json({ success: true, message: 'change password route' });
+};
 
-        if(result){
-                const token = jwt.sign({
-				userId :existingUser._id,
-				email:existingUser.email,
-				username:existingUser.username,
-				type:existingUser.type,
-				
-			},"elfeel",
-			{
-				expiresIn:"80h"
-			}
-		);
+exports.updateEmail = async (req, res) => {
+    res.json({ success: true, message: 'update email route' });
+};
 
-		console.log(token)
-
-		return res.cookie("Authorization", "Bearer " + token, {
-			expires: new Date(Date.now() + 80 * 3600000),
-			httpOnly: true,
-			secure: true
-		  }).json({
-			success: true,
-			token,
-			message: "Signed in successfully",
-		  });
-		  			
-		}else{
-			return res.status(401).json({message:"Username or password is incorrect"})
-		}
-
-	 }else{
-     	return res.status(401).json({message:"User not found"})
-	 }
-	 
-	
-}
-
-exports.activateAccount = async (req, res)=>{
-
-}
-exports.changePassword = async (req, res)=>{
-
-}
-exports.updateEmail = async (req, res)=>{
-
-}
-exports.deleteAccount = async (req, res)=>{
-
-}
+exports.deleteAccount = async (req, res) => {
+    res.json({ success: true, message: 'delete account route' });
+};

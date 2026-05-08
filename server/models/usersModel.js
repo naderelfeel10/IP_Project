@@ -26,6 +26,18 @@ const userSchema = mongoose.Schema({
         trim:true,
 		select: true,
     },
+	storeName:{
+		type:String,
+		trim:true
+	},
+	phone:{
+		type:String,
+		trim:true
+	},
+	address:{
+		type:String,
+		trim:true
+	},
     type:{
         type:String,
         enum:['buyerAccount', 'sellerAccount'],
