@@ -71,7 +71,7 @@ exports.signin = async (req, res) => {
             email: existingUser.email,
             username: existingUser.username,
             type: existingUser.type
-        }, process.env.JWT_SECRET, {
+        }, process.env.JWT_SECRET || 'elfeel', {
             expiresIn: '80h'
         });
 

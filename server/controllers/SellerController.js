@@ -4,6 +4,18 @@ const categoryModel = require('../models/categoryModel');
 const orderModel = require('../models/orderModel');
 const flagModel = require('../models/flagModel');
 
+exports.getAllSellers = async (req, res) => {
+    try {
+        const sellers = await userModel
+            .find({ type: 'sellerAccount' })
+            .select('email username storeName phone address type isActive shippingAddress flagCount');
+
+        res.json({ success: true, result: sellers });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 exports.getSellerStore = async (req, res) => {
     try {
         const productsCount = await productModel.countDocuments({ sellerId: req.userInfo.userId });

@@ -1,12 +1,12 @@
-// const express = require('express')
-// const buyerController = require('../controllers/BuyerController')
-// const router = express.Router();
+const express = require('express');
+const buyerController = require('../controllers/BuyerController');
+const { authMiddleWare } = require('../middlewares/authMiddleware');
 
+const router = express.Router();
 
+router.get('/getAllBuyers', buyerController.getAllBuyers);
+router.get('/getProfile', authMiddleWare, buyerController.getProfile);
+router.get('/getPurchaseHistroy', authMiddleWare, buyerController.getPurchaseHistroy);
+router.patch('/flagSeller', authMiddleWare, buyerController.flagSeller);
 
-// router.get('/getProfile/',buyerController.getProfile);
-// router.get('/getPurchaseHistroy',buyerController.getPurchaseHistroy);
-// router.patch('/flagSeller/',buyerController.flagSeller);
-
-
-// module.exports = router;
+module.exports = router;

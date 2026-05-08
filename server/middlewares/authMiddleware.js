@@ -12,7 +12,7 @@ const authMiddleWare = (req, res, next) => {
     const token = authValue.split(' ')[1];
 
     try {
-        const decodedTokenInfo = jwt.verify(token, process.env.JWT_SECRET);
+        const decodedTokenInfo = jwt.verify(token, process.env.JWT_SECRET || 'elfeel');
         req.userInfo = decodedTokenInfo;
         next();
     } catch (e) {
@@ -28,4 +28,12 @@ const sellerOnly = (req, res, next) => {
     next();
 };
 
-module.exports = { authMiddleWare, sellerOnly };
+const buyerOnly = (req, res, next) => {
+    if (req.userInfo.type !== 'buyerAccount') {
+        return res.status(403).json({ success: false, message: 'buyer account only' });
+    }
+
+    next();
+};
+
+module.exports = { authMiddleWare, sellerOnly, buyerOnly };

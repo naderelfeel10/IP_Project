@@ -27,6 +27,12 @@ const ProductSchema = mongoose.Schema({
         type:Number,
         default:0
     },
+    avgRating:{
+        type:Number,
+        default:0,
+        min:0,
+        max:5
+    },
     available:{
         type:Boolean,
         default:true
