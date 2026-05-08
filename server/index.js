@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser')
 const cors = require('cors');
 
+require('dotenv').config();
 
 app.use(cors({
     origin: 'http://localhost:3001', 
@@ -39,8 +40,8 @@ const authMiddleWare = require('./middlewares/authMiddleware');
 
 // const { userInfo } = require('os');
 
-
-const uri = "mongodb+srv://ahmedsomaya022_db_user:Pass@cluster0.4j8apfo.mongodb.net/CourseDB?appName=Cluster0";
+const uri = process.env.MONGO_URI;
+//const uri = "mongodb+srv://ahmedsomaya022_db_user:Pass@cluster0.4j8apfo.mongodb.net/CourseDB?appName=Cluster0";
 
 const ConnectedDB = async() =>{
         try {
@@ -73,7 +74,8 @@ app.get('/',authMiddleWare.authMiddleWare, (req, res) => {
 });
 
 
-const PORT = 3000;
+//const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`server running on http://localhost:${PORT}`);
 });
