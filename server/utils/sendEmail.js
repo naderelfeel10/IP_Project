@@ -1,7 +1,9 @@
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
@@ -11,9 +13,10 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+
 const sendVerificationEmail = async (toEmail, code) => {
     await transporter.sendMail({
-        from: `"Your App" <${process.env.EMAIL_USER}>`,
+        from: `"My App" <${process.env.EMAIL_USER}>`,
         to: toEmail,
         subject: 'Verify your account',
         html: `
@@ -26,4 +29,3 @@ const sendVerificationEmail = async (toEmail, code) => {
 };
 
 module.exports = { sendVerificationEmail };
-
