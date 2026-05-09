@@ -25,9 +25,5 @@ const sendVerificationEmail = async (toEmail, code) => {
     });
 };
 
-<<<<<<< HEAD
 module.exports = { sendVerificationEmail };
 
-=======
-module.exports = { sendVerificationEmail };
->>>>>>> de56e9c45c678c00cec6a71d9492ce9c7b0d1b1d
