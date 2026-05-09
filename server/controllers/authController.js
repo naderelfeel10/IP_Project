@@ -3,8 +3,22 @@ const mongoose = require('mongoose');
 const { signupSchema } = require('../middlewares/validator');
 const { doHash, doPassValidation } = require('../utils/hashing');
 const userModel = require('../models/usersModel');
-const { sendVerificationEmail } = require('../utils/sendEmail'); 
+const cartModel = require('../models/cartModel');
+const categoryModel = require('../models/categoryModel');
+const flagModel = require('../models/flagModel');
+const productModel = require('../models/productModel');
+const reviewModel = require('../models/reviewModel');
 
+const recalculateProductAvgRating = async (productId) => {
+    const castProductId = new mongoose.Types.ObjectId(productId);
+    const result = await reviewModel.aggregate([
+        { $match: { productId: castProductId } },
+        { $group: { _id: '$productId', avgRating: { $avg: '$rating' } } }
+    ]);
+
+    const avgRating = result.length ? Number(result[0].avgRating.toFixed(2)) : 0;
+    await productModel.updateOne({ _id: castProductId }, { avgRating: avgRating });
+};
 
 const recalculateCartTotal = async (cart) => {
     let totalPrice = 0;
@@ -20,7 +34,7 @@ const recalculateCartTotal = async (cart) => {
     cart.totalPrice = totalPrice;
     await cart.save();
 };
-const { sendVerificationEmail } = require('../utils/sendEmail'); 
+
 
 exports.createAccount = async (req, res) => {
     try {
