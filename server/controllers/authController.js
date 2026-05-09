@@ -241,13 +241,102 @@ exports.resendCode = async (req, res) => {
 };
 
 exports.changePassword = async (req, res) => {
-    res.json({ success: true, message: 'change password route' });
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.userInfo.userId;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Current password and new password are required' });
+        }
+
+        if (currentPassword === newPassword) {
+            return res.status(400).json({ success: false, message: 'New password must be different from current password' });
+        }
+
+        const user = await userModel.findById(userId).select('+password');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const currentMatches = await doPassValidation(currentPassword, user.password);
+        if (!currentMatches) {
+            return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+        }
+
+        const hashedPassword = await doHash(newPassword, 12);
+        await userModel.findByIdAndUpdate(userId, { password: hashedPassword });
+
+        return res.status(200).json({ success: true, message: 'Password updated successfully' });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 exports.updateEmail = async (req, res) => {
-    res.json({ success: true, message: 'update email route' });
+    try {
+        const { newEmail } = req.body;
+        const userId = req.userInfo.userId;
+
+        if (!newEmail) {
+            return res.status(400).json({ success: false, message: 'New email is required' });
+        }
+
+        const normalizedEmail = newEmail.trim().toLowerCase();
+        const user = await userModel.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        if (user.email.toLowerCase() === normalizedEmail) {
+            return res.status(200).json({ success: true, message: 'This is already your current email', token: req.headers.authorization?.split(' ')[1] || req.cookies.Authorization?.split(' ')[1] });
+        }
+
+        const existingUser = await userModel.findOne({ email: normalizedEmail });
+        if (existingUser && existingUser._id.toString() !== userId) {
+            return res.status(409).json({ success: false, message: 'Email is already in use' });
+        }
+
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { email: normalizedEmail },
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const token = jwt.sign({
+            userId: updatedUser._id,
+            email: updatedUser.email,
+            username: updatedUser.username,
+            type: updatedUser.type
+        }, process.env.JWT_SECRET || 'elfeel', {
+            expiresIn: '80h'
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Email updated successfully',
+            token
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 exports.deleteAccount = async (req, res) => {
-    res.json({ success: true, message: 'delete account route' });
+    try {
+        const userId = req.userInfo.userId;
+
+        const deletedUser = await userModel.findByIdAndDelete(userId);
+        if (!deletedUser) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        return res.status(200).json({ success: true, message: 'Account deleted successfully' });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
 };
