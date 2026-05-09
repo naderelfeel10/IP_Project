@@ -83,6 +83,12 @@ exports.signin = async (req, res) => {
         if (!result) {
             return res.status(401).json({ success: false, message: 'Email or password is incorrect' });
         }
+        if (!existingUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Account is not activated. Please check your email for the verification code.' 
+            });
+        }
 
         const token = jwt.sign({
             userId: existingUser._id,
