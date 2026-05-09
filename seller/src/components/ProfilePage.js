@@ -84,20 +84,20 @@ function ProfilePage() {
     };
 
     const updateEmail = async (e) => {
-        e.preventDefault();
-        setEmailMessage('');
-        setEmailError('');
-        try {
-            await API.patch('/auth/updateEmail', {
-                newEmail: emailForm.newEmail,
-                password: emailForm.password
-            });
-            setEmailMessage('Email updated successfully. Please log in again.');
-            setEmailForm({ newEmail: '', password: '' });
-        } catch (err) {
-            setEmailError(err.response?.data?.message || 'Cannot update email.');
-        }
-    };
+    e.preventDefault();
+    setEmailMessage('');
+    setEmailError('');
+    try {
+        await API.patch('/auth/updateEmail', {
+            email: emailForm.newEmail,      // changed from newEmail to email
+            password: emailForm.password
+        });
+        setEmailMessage('Email updated successfully.');
+        setEmailForm({ newEmail: '', password: '' });
+    } catch (err) {
+        setEmailError(err.response?.data?.message || 'Cannot update email.');
+    }
+};
 
     const deleteAccount = async (e) => {
         e.preventDefault();

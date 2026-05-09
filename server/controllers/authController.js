@@ -173,19 +173,16 @@ exports.changePassword = async (req, res) => {
     }
 };
 
+
 exports.updateEmail = async (req, res) => {
     try {
-        const email = req.body.email;
-        const password = req.body.password;
+        const { email, password } = req.body;
 
-        const { error } = signupSchema.validate({ email, password: password || 'temporary-password' });
-
-        if (error) {
-            return res.status(400).json({ success: false, message: error.details[0].message });
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: 'email and password are required' });
         }
 
         const existingUser = await userModel.findOne({ email });
-
         if (existingUser && existingUser._id.toString() !== req.userInfo.userId) {
             return res.status(409).json({ success: false, message: 'email already exists' });
         }
@@ -196,35 +193,32 @@ exports.updateEmail = async (req, res) => {
             return res.status(404).json({ success: false, message: 'user not found' });
         }
 
-        if (password) {
-            const isPasswordCorrect = await doPassValidation(password, user.password);
+        const isPasswordCorrect = await doPassValidation(password, user.password);
 
-            if (!isPasswordCorrect) {
-                return res.status(401).json({ success: false, message: 'password is incorrect' });
-            }
+        if (!isPasswordCorrect) {
+            return res.status(401).json({ success: false, message: 'password is incorrect' });
         }
 
         user.email = email;
         await user.save();
 
-        const token = jwt.sign({
-            userId: user._id,
-            email: user.email,
-            username: user.username,
-            type: user.type
-        }, process.env.JWT_SECRET || 'elfeel', {
-            expiresIn: '80h'
-        });
+        const token = jwt.sign(
+            { userId: user._id, email: user.email, username: user.username, type: user.type },
+            process.env.JWT_SECRET || 'elfeel',
+            { expiresIn: '80h' }
+        );
 
         res.cookie('Authorization', 'Bearer ' + token, {
             expires: new Date(Date.now() + 80 * 3600000),
             httpOnly: true,
             secure: false,
             sameSite: 'lax'
-        }).json({
+        });
+
+        return res.status(200).json({
             success: true,
             message: 'email updated successfully',
-            token: token,
+            token,
             user: {
                 _id: user._id,
                 email: user.email,
@@ -235,10 +229,12 @@ exports.updateEmail = async (req, res) => {
                 address: user.address
             }
         });
+
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
+
 
 exports.deleteAccount = async (req, res) => {
     try {
