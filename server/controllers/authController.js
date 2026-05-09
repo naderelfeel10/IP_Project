@@ -3,22 +3,8 @@ const mongoose = require('mongoose');
 const { signupSchema } = require('../middlewares/validator');
 const { doHash, doPassValidation } = require('../utils/hashing');
 const userModel = require('../models/usersModel');
-const cartModel = require('../models/cartModel');
-const categoryModel = require('../models/categoryModel');
-const flagModel = require('../models/flagModel');
-const productModel = require('../models/productModel');
-const reviewModel = require('../models/reviewModel');
+const { sendVerificationEmail } = require('../utils/sendEmail'); 
 
-const recalculateProductAvgRating = async (productId) => {
-    const castProductId = new mongoose.Types.ObjectId(productId);
-    const result = await reviewModel.aggregate([
-        { $match: { productId: castProductId } },
-        { $group: { _id: '$productId', avgRating: { $avg: '$rating' } } }
-    ]);
-
-    const avgRating = result.length ? Number(result[0].avgRating.toFixed(2)) : 0;
-    await productModel.updateOne({ _id: castProductId }, { avgRating: avgRating });
-};
 
 const recalculateCartTotal = async (cart) => {
     let totalPrice = 0;
@@ -44,43 +30,60 @@ exports.createAccount = async (req, res) => {
         const storeName = req.body.storeName;
         const phone = req.body.phone;
         const address = req.body.address;
-
+ 
         const { error } = signupSchema.validate({ email, password });
-
+ 
         if (error) {
             return res.status(401).json({
                 success: false,
                 message: error.details[0].message
             });
         }
-
+ 
         const existingUser = await userModel.findOne({ email });
-
+ 
         if (existingUser) {
             return res.status(401).json({ success: false, message: 'user already exists' });
         }
-
+ 
         const hashedPassword = await doHash(password, 12);
-
+ 
         const newUser = new userModel({
-            email: email,
+            email,
             password: hashedPassword,
-            username: username,
-            type: type,
-            storeName: storeName,
-            phone: phone,
-            address: address,
-            isActive: true
+            username,
+            type,
+            storeName,
+            phone,
+            address,
+            isActive: false   // false until they verify email
         });
-
+ 
         await newUser.save();
-
-        return res.status(201).json({ success: true, message: 'Done signing up' });
+ 
+        // generate 6-digit code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedCode = await doHash(code, 12);
+ 
+        // save hashed code + expiry to DB
+        await userModel.findByIdAndUpdate(newUser._id, {
+            verificationCode: hashedCode,
+            verificationCodeExpires: new Date(Date.now() + 10 * 60 * 1000) // 10 min
+        });
+ 
+        // send code to user's email
+        await sendVerificationEmail(email, code);
+ 
+        return res.status(201).json({
+            success: true,
+            message: 'Account created! Please check your email for the verification code.'
+        });
+ 
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
-
+ 
 exports.signin = async (req, res) => {
     try {
         const email = req.body.email;
@@ -96,6 +99,12 @@ exports.signin = async (req, res) => {
 
         if (!result) {
             return res.status(401).json({ success: false, message: 'Email or password is incorrect' });
+        }
+        if (!existingUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Account is not activated. Please check your email for the verification code.' 
+            });
         }
 
         const token = jwt.sign({
@@ -132,11 +141,126 @@ exports.signin = async (req, res) => {
 };
 
 exports.logout = async (req, res) => {
-    return res.clearCookie('Authorization').json({ success: true, message: 'logged out' });
+    return res
+        .clearCookie('Authorization', {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'lax'
+        })
+        .json({ 
+            success: true, 
+            message: 'Logged out successfully' 
+        });
 };
 
 exports.activateAccount = async (req, res) => {
-    res.json({ success: true, message: 'activate account route' });
+    try {
+        const email = req.body.email;
+        const code  = req.body.code;
+
+        if (!email || !code) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email and verification code are required'
+            });
+        }
+
+        // find user and include hidden fields
+        const user = await userModel
+            .findOne({ email })
+            .select('+verificationCode +verificationCodeExpires');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        if (user.isActive) {
+            return res.status(400).json({
+                success: false,
+                message: 'Account is already active'
+            });
+        }
+
+        if (!user.verificationCode || !user.verificationCodeExpires) {
+            return res.status(400).json({
+                success: false,
+                message: 'No verification code found — request a new one'
+            });
+        }
+
+        // check if code has expired
+        if (user.verificationCodeExpires < new Date()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Verification code has expired — request a new one'
+            });
+        }
+
+        // check if code matches
+        const isValid = await doPassValidation(code, user.verificationCode);
+        if (!isValid) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid verification code'
+            });
+        }
+
+        // activate account and clear the code
+        await userModel.findByIdAndUpdate(user._id, {
+            isActive: true,
+            verificationCode: undefined,
+            verificationCodeExpires: undefined
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Account activated successfully'
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+exports.resendCode = async (req, res) => {
+    try {
+        const email = req.body.email;
+
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Email is required' });
+        }
+
+        const user = await userModel.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        if (user.isActive) {
+            return res.status(400).json({ success: false, message: 'Account is already active' });
+        }
+
+        // generate new code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedCode = await doHash(code, 12);
+
+        await userModel.findByIdAndUpdate(user._id, {
+            verificationCode: hashedCode,
+            verificationCodeExpires: new Date(Date.now() + 10 * 60 * 1000)
+        });
+
+        await sendVerificationEmail(email, code);
+
+        return res.status(200).json({ success: true, message: 'New verification code sent to your email' });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 exports.changePassword = async (req, res) => {
@@ -173,19 +297,16 @@ exports.changePassword = async (req, res) => {
     }
 };
 
+
 exports.updateEmail = async (req, res) => {
     try {
-        const email = req.body.email;
-        const password = req.body.password;
+        const { email, password } = req.body;
 
-        const { error } = signupSchema.validate({ email, password: password || 'temporary-password' });
-
-        if (error) {
-            return res.status(400).json({ success: false, message: error.details[0].message });
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: 'email and password are required' });
         }
 
         const existingUser = await userModel.findOne({ email });
-
         if (existingUser && existingUser._id.toString() !== req.userInfo.userId) {
             return res.status(409).json({ success: false, message: 'email already exists' });
         }
@@ -196,35 +317,32 @@ exports.updateEmail = async (req, res) => {
             return res.status(404).json({ success: false, message: 'user not found' });
         }
 
-        if (password) {
-            const isPasswordCorrect = await doPassValidation(password, user.password);
+        const isPasswordCorrect = await doPassValidation(password, user.password);
 
-            if (!isPasswordCorrect) {
-                return res.status(401).json({ success: false, message: 'password is incorrect' });
-            }
+        if (!isPasswordCorrect) {
+            return res.status(401).json({ success: false, message: 'password is incorrect' });
         }
 
         user.email = email;
         await user.save();
 
-        const token = jwt.sign({
-            userId: user._id,
-            email: user.email,
-            username: user.username,
-            type: user.type
-        }, process.env.JWT_SECRET || 'elfeel', {
-            expiresIn: '80h'
-        });
+        const token = jwt.sign(
+            { userId: user._id, email: user.email, username: user.username, type: user.type },
+            process.env.JWT_SECRET || 'elfeel',
+            { expiresIn: '80h' }
+        );
 
         res.cookie('Authorization', 'Bearer ' + token, {
             expires: new Date(Date.now() + 80 * 3600000),
             httpOnly: true,
             secure: false,
             sameSite: 'lax'
-        }).json({
+        });
+
+        return res.status(200).json({
             success: true,
             message: 'email updated successfully',
-            token: token,
+            token,
             user: {
                 _id: user._id,
                 email: user.email,
@@ -235,10 +353,12 @@ exports.updateEmail = async (req, res) => {
                 address: user.address
             }
         });
+
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
+
 
 exports.deleteAccount = async (req, res) => {
     try {
