@@ -53,11 +53,20 @@ const userSchema = mongoose.Schema({
 	flagCount:{
 		type:Number,
 		default:0,
+	},
+	verificationCode: {
+    type: String,
+    select: false,
+	},
+	verificationCodeExpires: {
+    	type: Date,
+    	select: false,
 	}
 },
     {
         timestamps:true,
     }
+
 
 )
 
