@@ -28,6 +28,9 @@ function Dashboard({ seller, onLogout }) {
         loadStats();
     }, []);
 
+    // get first letter of username for avatar
+    const avatarLetter = seller.username ? seller.username[0].toUpperCase() : 'S';
+
     return (
         <div className="page">
             <div className="topbar">
@@ -35,9 +38,38 @@ function Dashboard({ seller, onLogout }) {
                     <h1>{seller.storeName || 'Seller Dashboard'}</h1>
                     <p>Welcome {seller.username}</p>
                 </div>
-                <button className="logout-btn" onClick={onLogout}>
-                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                </button>
+
+                {/* header right side */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+                    {/* profile avatar — click to go to profile page */}
+                    <div
+                        onClick={() => setPage('profile')}
+                        style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '50%',
+                            background: '#1565c0',
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: '700',
+                            fontSize: '16px',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            title: 'Profile'
+                        }}
+                        title="Profile"
+                    >
+                        {avatarLetter}
+                    </div>
+
+                    {/* logout button */}
+                    <button className="logout-btn" onClick={onLogout}>
+                        <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
             </div>
 
             <div className="layout">
@@ -46,7 +78,10 @@ function Dashboard({ seller, onLogout }) {
                     <button className={page === 'categories' ? 'active' : ''} onClick={() => setPage('categories')}>Categories</button>
                     <button className={page === 'orders' ? 'active' : ''} onClick={() => setPage('orders')}>Orders</button>
                     <button className={page === 'flags' ? 'active' : ''} onClick={() => setPage('flags')}>Buyer flags</button>
-                    <button className={page === 'profile' ? 'active' : ''} onClick={() => setPage('profile')}>Profile</button>
+                    <button className={page === 'profile' ? 'active' : ''} onClick={() => setPage('profile')}>
+                        <i className="fa-solid fa-user" style={{ marginRight: '6px' }}></i>
+                        Profile
+                    </button>
                 </div>
 
                 <main className="content">
@@ -73,7 +108,7 @@ function Dashboard({ seller, onLogout }) {
                     {page === 'categories' && <CategoriesPage onChange={loadStats} />}
                     {page === 'orders' && <OrdersPage onChange={loadStats} />}
                     {page === 'flags' && <FlagsPage />}
-                    {page === 'profile' && <ProfilePage />}
+                    {page === 'profile' && <ProfilePage onLogout={onLogout} />}
                 </main>
             </div>
         </div>
