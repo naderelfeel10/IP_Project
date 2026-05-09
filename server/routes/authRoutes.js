@@ -9,6 +9,7 @@ const {
     updateEmail, 
     deleteAccount 
 } = require('../controllers/authController');
+const { authMiddleWare } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
@@ -17,10 +18,9 @@ router.post('/signin', signin);
 router.post('/logout', logout);
 
 router.patch('/activateAccount', activateAccount);
+router.patch('/changePassword', authMiddleWare, changePassword);
+router.patch('/updateEmail', authMiddleWare, updateEmail);
 router.post('/resendCode', resendCode);
-router.patch('/changePassword', changePassword);
-router.patch('/updateEmail', updateEmail);
-
-router.delete('/deleteAccount', deleteAccount);
+router.delete('/deleteAccount', authMiddleWare, deleteAccount);
 
 module.exports = router;

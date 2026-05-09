@@ -26,3 +26,4 @@ const sendVerificationEmail = async (toEmail, code) => {
 };
 
 module.exports = { sendVerificationEmail };
+
