@@ -109,6 +109,7 @@ function ProductsPage({ onChange }) {
                     <table className="table">
                         <thead>
                             <tr>
+                                <th>Image</th>
                                 <th>Name</th>
                                 <th>Category</th>
                                 <th>Price per unit</th>
@@ -121,6 +122,34 @@ function ProductsPage({ onChange }) {
                         <tbody>
                             {shownProducts.map((product) => (
                                 <tr key={product._id}>
+                                    <td>
+                                        {product.imageUrl ? (
+                                            <img
+                                                src={product.imageUrl}
+                                                alt={product.name}
+                                                style={{
+                                                    width: '60px',
+                                                    height: '60px',
+                                                    objectFit: 'cover',
+                                                    borderRadius: '6px'
+                                                }}
+                                            />
+                                        ) : (
+                                            <div style={{
+                                                width: '60px',
+                                                height: '60px',
+                                                background: '#f0f0f0',
+                                                borderRadius: '6px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '11px',
+                                                color: '#999'
+                                            }}>
+                                                No image
+                                            </div>
+                                        )}
+                                    </td>
                                     <td>
                                         <strong>{product.name}</strong>
                                         <br />
