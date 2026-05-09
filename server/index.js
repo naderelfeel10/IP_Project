@@ -1,0 +1,111 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
+const cors = require('cors');
+require('dotenv').config();
+
+const authRoute = require('./routes/authRoutes');
+const productRoute = require('./routes/productRoutes');
+const categoryRoute = require('./routes/categoryRoutes');
+const orderRoute = require('./routes/orderRoutes');
+const sellerRoute = require('./routes/SellerRoutes');
+const cartRoute = require('./routes/cartRoutes');
+const reviewRoute = require('./routes/reviewRoutes');
+const buyerRoute = require('./routes/BuyerRoutes');
+const openApiDocument = require('./docs/openapi');
+
+const app = express();
+
+app.use(cors({
+    origin: ['http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'],
+    credentials: true
+}));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+const makeMongoUri = () => {
+    const uri = process.env.MONGO_URI;
+
+    if (!uri) {
+        return 'mongodb://127.0.0.1:27017/IP_Project_DB';
+    }
+
+    if (!uri.startsWith('mongodb+srv://')) {
+        return uri;
+    }
+
+    if (!uri.includes('cluster0.gqbrbxi.mongodb.net')) {
+        return uri;
+    }
+
+    const oldUrl = new URL(uri);
+    const username = encodeURIComponent(decodeURIComponent(oldUrl.username));
+    const password = encodeURIComponent(decodeURIComponent(oldUrl.password));
+    const dbName = oldUrl.pathname.replace('/', '') || 'IP_Project_DB';
+    const hosts = [
+        'ac-ivyqvvm-shard-00-00.gqbrbxi.mongodb.net:27017',
+        'ac-ivyqvvm-shard-00-01.gqbrbxi.mongodb.net:27017',
+        'ac-ivyqvvm-shard-00-02.gqbrbxi.mongodb.net:27017'
+    ].join(',');
+
+    return `mongodb://${username}:${password}@${hosts}/${dbName}?ssl=true&authSource=admin&retryWrites=true&w=majority&appName=Cluster0`;
+};
+
+const connectDB = async () => {
+    try {
+        const uri = makeMongoUri();
+        await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+        console.log('connected to DB successfully');
+    } catch (err) {
+        console.log('MongoDB connection error:', err.message);
+    }
+};
+
+connectDB();
+
+app.use('/auth', authRoute);
+app.use('/products', productRoute, reviewRoute);
+app.use('/categories', categoryRoute);
+app.use('/orders', orderRoute);
+app.use('/seller', sellerRoute);
+app.use('/cart', cartRoute);
+app.use('/buyer', buyerRoute);
+
+app.get('/swagger.json', (req, res) => {
+    res.json(openApiDocument);
+});
+
+app.get('/api-docs', (req, res) => {
+    res.send(`
+<!doctype html>
+<html>
+  <head>
+    <title>IP Project API Docs</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+      window.onload = () => {
+        window.ui = SwaggerUIBundle({
+          url: "/swagger.json",
+          dom_id: "#swagger-ui"
+        });
+      };
+    </script>
+  </body>
+</html>
+    `);
+});
+
+app.get('/', (req, res) => {
+    res.send('Seller server is running');
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`server running on http://localhost:${PORT}`);
+});
