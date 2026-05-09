@@ -20,6 +20,7 @@ const recalculateCartTotal = async (cart) => {
     cart.totalPrice = totalPrice;
     await cart.save();
 };
+const { sendVerificationEmail } = require('../utils/sendEmail'); 
 
 exports.createAccount = async (req, res) => {
     try {
