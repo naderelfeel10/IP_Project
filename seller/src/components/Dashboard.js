@@ -35,7 +35,9 @@ function Dashboard({ seller, onLogout }) {
                     <h1>{seller.storeName || 'Seller Dashboard'}</h1>
                     <p>Welcome {seller.username}</p>
                 </div>
-                <button className="logout-btn" onClick={onLogout}>Logout</button>
+                <button className="logout-btn" onClick={onLogout}>
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </button>
             </div>
 
             <div className="layout">
