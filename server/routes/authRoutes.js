@@ -4,6 +4,7 @@ const {
     signin, 
     logout,
     activateAccount, 
+    resendCode,
     changePassword, 
     updateEmail, 
     deleteAccount 
@@ -16,6 +17,7 @@ router.post('/signin', signin);
 router.post('/logout', logout);
 
 router.patch('/activateAccount', activateAccount);
+router.post('/resendCode', resendCode);
 router.patch('/changePassword', changePassword);
 router.patch('/updateEmail', updateEmail);
 

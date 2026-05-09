@@ -111,7 +111,7 @@ function ProductsPage({ onChange }) {
                             <tr>
                                 <th>Name</th>
                                 <th>Category</th>
-                                <th>Price</th>
+                                <th>Price per unit</th>
                                 <th>Qty</th>
                                 <th>Delivery</th>
                                 <th>Status</th>

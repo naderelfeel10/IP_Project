@@ -52,7 +52,7 @@ function ProductForm({ product, categories, onSave, onCancel }) {
                         <input name="name" value={form.name} onChange={changeInput} required />
                     </div>
                     <div>
-                        <label>Price</label>
+                        <label>Price per unit</label>
                         <input name="price" type="number" min="0" value={form.price} onChange={changeInput} required />
                     </div>
                     <div>

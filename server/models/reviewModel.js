@@ -1,11 +1,9 @@
-const { Timestamp } = require('bson');
-const { bool } = require('joi');
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema({
-    orderId:{
+    productId:{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Order',
+        ref: 'Product',
         required: true
     },
     buyerId:{
@@ -26,5 +24,4 @@ const reviewSchema = new mongoose.Schema({
     commentText: String
 }, { timestamps: true });
 
-
-const Order = mongoose.model('Review', reviewSchema);
+module.exports = mongoose.model('Review', reviewSchema);

@@ -9,11 +9,15 @@ const productRoute = require('./routes/productRoutes');
 const categoryRoute = require('./routes/categoryRoutes');
 const orderRoute = require('./routes/orderRoutes');
 const sellerRoute = require('./routes/SellerRoutes');
+const cartRoute = require('./routes/cartRoutes');
+const reviewRoute = require('./routes/reviewRoutes');
+const buyerRoute = require('./routes/BuyerRoutes');
+const openApiDocument = require('./docs/openapi');
 
 const app = express();
 
 app.use(cors({
-    origin: ['http://localhost:3001', 'http://localhost:3002'],
+    origin: ['http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'],
     credentials: true
 }));
 
@@ -25,7 +29,7 @@ const makeMongoUri = () => {
     const uri = process.env.MONGO_URI;
 
     if (!uri) {
-        return '';
+        return 'mongodb://127.0.0.1:27017/IP_Project_DB';
     }
 
     if (!uri.startsWith('mongodb+srv://')) {
@@ -52,7 +56,7 @@ const makeMongoUri = () => {
 const connectDB = async () => {
     try {
         const uri = makeMongoUri();
-        await mongoose.connect(uri);
+        await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
         console.log('connected to DB successfully');
     } catch (err) {
         console.log('MongoDB connection error:', err.message);
@@ -62,10 +66,40 @@ const connectDB = async () => {
 connectDB();
 
 app.use('/auth', authRoute);
-app.use('/products', productRoute);
+app.use('/products', productRoute, reviewRoute);
 app.use('/categories', categoryRoute);
 app.use('/orders', orderRoute);
 app.use('/seller', sellerRoute);
+app.use('/cart', cartRoute);
+app.use('/buyer', buyerRoute);
+
+app.get('/swagger.json', (req, res) => {
+    res.json(openApiDocument);
+});
+
+app.get('/api-docs', (req, res) => {
+    res.send(`
+<!doctype html>
+<html>
+  <head>
+    <title>IP Project API Docs</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+      window.onload = () => {
+        window.ui = SwaggerUIBundle({
+          url: "/swagger.json",
+          dom_id: "#swagger-ui"
+        });
+      };
+    </script>
+  </body>
+</html>
+    `);
+});
 
 app.get('/', (req, res) => {
     res.send('Seller server is running');

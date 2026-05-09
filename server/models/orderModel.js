@@ -25,6 +25,9 @@ const orderSchema = new mongoose.Schema({
     orderComment:{
         type:String
     },
+    buyerComment:{
+        type:String
+    },
     status: { 
         type: String, 
         enum: ['Pending', 'Accepted', 'Preparing', 'Out for delivery', 'Delivered', 'Cancelled', 'Failed delivery'], 
