@@ -1,6 +1,7 @@
 const express = require('express');
 const { 
     createAccount, 
+    createAdminAccount,
     signin, 
     logout,
     activateAccount, 
@@ -14,6 +15,7 @@ const { authMiddleWare } = require('../middlewares/authMiddleware');
 const router = express.Router();
 
 router.post('/createAccount', createAccount);
+router.post('/createAdmin', createAdminAccount);
 router.post('/signin', signin);
 router.post('/logout', logout);
 

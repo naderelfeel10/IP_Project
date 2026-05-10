@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const authMiddleWare = (req, res, next) => {
     const cookieAuth = req.cookies.Authorization;
     const headerAuth = req.headers.authorization;
-    const authValue = cookieAuth || headerAuth;
+    const authValue = headerAuth || cookieAuth;
 
     if (!authValue || !authValue.startsWith('Bearer ')) {
         return res.status(401).json({ success: false, message: 'login first' });
@@ -36,4 +36,12 @@ const buyerOnly = (req, res, next) => {
     next();
 };
 
-module.exports = { authMiddleWare, sellerOnly, buyerOnly };
+const adminOnly = (req, res, next) => {
+    if (req.userInfo.type !== 'admin') {
+        return res.status(403).json({ success: false, message: 'admin account only' });
+    }
+
+    next();
+};
+
+module.exports = { authMiddleWare, sellerOnly, buyerOnly, adminOnly };

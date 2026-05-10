@@ -40,7 +40,7 @@ const userSchema = mongoose.Schema({
 	},
     type:{
         type:String,
-        enum:['buyerAccount', 'sellerAccount'],
+        enum:['buyerAccount', 'sellerAccount', 'admin'],
         required:[true,'user type is required'],
     },
 	isActive:{

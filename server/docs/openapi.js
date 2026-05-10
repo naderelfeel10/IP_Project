@@ -157,6 +157,16 @@ module.exports = {
                     address: { type: 'string' }
                 }
             },
+            AdminSignupInput: {
+                type: 'object',
+                required: ['email', 'password'],
+                properties: {
+                    email: { type: 'string', format: 'email' },
+                    password: { type: 'string', minLength: 8, maxLength: 60 },
+                    username: { type: 'string' },
+                    setupSecret: { type: 'string', description: 'Optional body alternative to the x-admin-setup-secret header.' }
+                }
+            },
             AuthSigninInput: {
                 type: 'object',
                 required: ['email', 'password'],
@@ -406,6 +416,20 @@ module.exports = {
                     reason: { type: 'string' },
                     details: { type: 'string' }
                 }
+            },
+            UserStatusInput: {
+                type: 'object',
+                required: ['isActive'],
+                properties: {
+                    isActive: { type: 'boolean' }
+                }
+            },
+            FlagStatusInput: {
+                type: 'object',
+                required: ['status'],
+                properties: {
+                    status: { type: 'string', enum: ['Open', 'Resolved'] }
+                }
             }
         }
     },
@@ -417,6 +441,7 @@ module.exports = {
         { name: 'Orders' },
         { name: 'Buyer' },
         { name: 'Seller' },
+        { name: 'Admin' },
         { name: 'Categories' }
     ],
     paths: {
@@ -429,6 +454,29 @@ module.exports = {
                     201: created('Account created'),
                     200: ok('Inactive account already existed and a new code was sent'),
                     401: badRequest,
+                    409: conflict,
+                    500: serverError
+                }
+            }
+        },
+        '/auth/createAdmin': {
+            post: {
+                tags: ['Auth'],
+                summary: 'Create an active admin account using the setup secret',
+                parameters: [
+                    {
+                        name: 'x-admin-setup-secret',
+                        in: 'header',
+                        required: false,
+                        schema: { type: 'string' },
+                        description: 'Must match ADMIN_SETUP_SECRET. Can also be sent as setupSecret in the JSON body.'
+                    }
+                ],
+                requestBody: jsonBody(ref('AdminSignupInput')),
+                responses: {
+                    201: created('Admin account created'),
+                    401: badRequest,
+                    403: forbidden,
                     409: conflict,
                     500: serverError
                 }
@@ -741,6 +789,53 @@ module.exports = {
             }
         },
         '/seller/flags': { get: { tags: ['Seller'], summary: 'Get flags created by current seller', security: bearerSecurity, responses: { 200: ok('Flags list'), 401: unauthorized, 403: forbidden, 500: serverError } } },
+
+        '/admin/flags': {
+            get: {
+                tags: ['Admin'],
+                summary: 'Get all reports and issue flags',
+                security: bearerSecurity,
+                responses: { 200: ok('Reports list'), 401: unauthorized, 403: forbidden, 500: serverError }
+            }
+        },
+        '/admin/users/{id}/status': {
+            patch: {
+                tags: ['Admin'],
+                summary: 'Activate or deactivate a user',
+                description: 'When a seller is deactivated, all of their products are marked unavailable. Reactivating the seller does not automatically republish products.',
+                security: bearerSecurity,
+                parameters: [idParam()],
+                requestBody: jsonBody(ref('UserStatusInput')),
+                responses: { 200: ok('User status updated'), 400: badRequest, 401: unauthorized, 403: forbidden, 404: notFound, 500: serverError }
+            }
+        },
+        '/admin/flags/{id}/status': {
+            patch: {
+                tags: ['Admin'],
+                summary: 'Update a report flag status',
+                security: bearerSecurity,
+                parameters: [idParam()],
+                requestBody: jsonBody(ref('FlagStatusInput')),
+                responses: { 200: ok('Flag status updated'), 400: badRequest, 401: unauthorized, 403: forbidden, 404: notFound, 500: serverError }
+            }
+        },
+        '/admin/users/{role}/{id}/flags': {
+            get: {
+                tags: ['Admin'],
+                summary: 'Get an admin user profile with all flags against that user',
+                security: bearerSecurity,
+                parameters: [
+                    {
+                        name: 'role',
+                        in: 'path',
+                        required: true,
+                        schema: { type: 'string', enum: ['buyer', 'seller'] }
+                    },
+                    idParam()
+                ],
+                responses: { 200: ok('User profile and flags'), 401: unauthorized, 403: forbidden, 404: notFound, 500: serverError }
+            }
+        },
 
         '/categories': {
             get: { tags: ['Categories'], summary: 'Get categories owned by the current seller', security: bearerSecurity, responses: { 200: ok('Categories'), 401: unauthorized, 403: forbidden, 500: serverError } },

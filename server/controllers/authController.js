@@ -48,6 +48,13 @@ exports.createAccount = async (req, res) => {
         const phone = req.body.phone;
         const address = req.body.address;
 
+        if (!['buyerAccount', 'sellerAccount'].includes(type)) {
+            return res.status(400).json({
+                success: false,
+                message: 'account type must be buyerAccount or sellerAccount'
+            });
+        }
+
         const { error } = signupSchema.validate({ email, password });
 
         if (error) {
@@ -126,6 +133,77 @@ exports.createAccount = async (req, res) => {
     }
 };
 
+exports.createAdminAccount = async (req, res) => {
+    try {
+        const setupSecret = req.headers['x-admin-setup-secret'] || req.body.setupSecret;
+
+        if (!process.env.ADMIN_SETUP_SECRET) {
+            return res.status(500).json({
+                success: false,
+                message: 'ADMIN_SETUP_SECRET is not configured'
+            });
+        }
+
+        if (setupSecret !== process.env.ADMIN_SETUP_SECRET) {
+            return res.status(403).json({
+                success: false,
+                message: 'invalid admin setup secret'
+            });
+        }
+
+        const email = req.body.email;
+        const password = req.body.password;
+        const username = req.body.username || 'Admin';
+
+        const { error } = signupSchema.validate({ email, password });
+
+        if (error) {
+            return res.status(401).json({
+                success: false,
+                message: error.details[0].message
+            });
+        }
+
+        const existingUser = await userModel.findOne({ email });
+
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
+                message: 'user already exists'
+            });
+        }
+
+        const hashedPassword = await doHash(password, 12);
+
+        const admin = await userModel.create({
+            email,
+            password: hashedPassword,
+            username,
+            type: 'admin',
+            isActive: true
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: 'admin account created',
+            user: {
+                _id: admin._id,
+                email: admin.email,
+                username: admin.username,
+                type: admin.type
+            },
+            result: {
+                _id: admin._id,
+                email: admin.email,
+                username: admin.username,
+                type: admin.type
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 exports.signin = async (req, res) => {
     try {
         const email = req.body.email;
@@ -141,6 +219,13 @@ exports.signin = async (req, res) => {
 
         if (!result) {
             return res.status(401).json({ success: false, message: 'Email or password is incorrect' });
+        }
+
+        if (existingUser.flagCount === 1) {
+            return res.status(403).json({
+                success: false,
+                message: 'account suspended please contact one of our admins'
+            });
         }
 
         if (!existingUser.isActive) {
@@ -287,7 +372,6 @@ exports.resendCode = async (req, res) => {
 
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedCode = await doHash(code, 12);
-
         await userModel.findByIdAndUpdate(user._id, {
             verificationCode: hashedCode,
             verificationCodeExpires: new Date(Date.now() + 10 * 60 * 1000)

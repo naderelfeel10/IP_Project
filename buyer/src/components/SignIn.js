@@ -17,8 +17,8 @@ function SignIn({ onSignedIn, onSwitchToSignUp }) {
         try {
             const res = await API.post('/auth/signin', { email, password });
             console.log(res.data);
-            if (res.data.user && res.data.user.type !== 'buyerAccount') {
-                setError('This page is for buyers only');
+            if (res.data.user && !['buyerAccount', 'admin'].includes(res.data.user.type)) {
+                setError('This page is for buyers ');
                 toast.error('This page is for buyers only');
                 return;
             }

@@ -4,7 +4,7 @@ import { Button, Drawer, Input } from 'antd';
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import API from '../api';
-import { clearAuthToken, getAuthUser } from '../auth';
+import { clearAuthToken, getAuthPayload, getAuthUser } from '../auth';
 import './MainNav.css';
 
 const { Search } = Input;
@@ -46,6 +46,7 @@ function MainNav() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const authUser = getAuthUser();
+    const authPayload = getAuthPayload();
     const initials = getInitials(authUser?.username);
     const cartItems = cart?.itemsList || [];
 
@@ -167,6 +168,9 @@ function MainNav() {
                 <nav className="drawer-links">
                     <NavLink to="/profile" onClick={closeDrawer}>User profile</NavLink>
                     <NavLink to="/orders" onClick={closeDrawer}>Orders</NavLink>
+                    {authPayload?.type === 'admin' && (
+                        <NavLink to="/admin/reports" onClick={closeDrawer}>Admin reports</NavLink>
+                    )}
                     <Button className="drawer-signout" danger onClick={handleSignOut} type="default">
                         Sign out
                     </Button>

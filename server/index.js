@@ -12,6 +12,7 @@ const sellerRoute = require('./routes/SellerRoutes');
 const cartRoute = require('./routes/cartRoutes');
 const reviewRoute = require('./routes/reviewRoutes');
 const buyerRoute = require('./routes/BuyerRoutes');
+const adminRoute = require('./routes/adminRoutes');
 const openApiDocument = require('./docs/openapi');
 
 const app = express();
@@ -72,6 +73,7 @@ app.use('/orders', orderRoute);
 app.use('/seller', sellerRoute);
 app.use('/cart', cartRoute);
 app.use('/buyer', buyerRoute);
+app.use('/admin', adminRoute);
 
 app.get('/swagger.json', (req, res) => {
     res.json(openApiDocument);
