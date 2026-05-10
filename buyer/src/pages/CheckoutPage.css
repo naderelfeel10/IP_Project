@@ -1,0 +1,136 @@
+.checkout-content {
+  margin: 0 auto;
+  max-width: 1100px;
+  padding: 0 24px 40px;
+}
+
+.checkout-layout {
+  align-items: flex-start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+}
+
+.checkout-items {
+  display: grid;
+  gap: 12px;
+}
+
+.checkout-item {
+  align-items: flex-start;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding: 18px 20px;
+}
+
+.checkout-item div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.checkout-item strong {
+  color: #111827;
+}
+
+.checkout-item div strong {
+  overflow-wrap: anywhere;
+}
+
+.checkout-item span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.checkout-item-actions {
+  align-items: flex-end;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.checkout-item-actions strong {
+  white-space: nowrap;
+}
+
+.checkout-quantity-controls {
+  align-items: center;
+  display: flex !important;
+  gap: 6px;
+}
+
+.checkout-quantity-controls span {
+  color: #374151;
+  font-size: 13px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.checkout-trash-button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.checkout-trash-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.checkout-summary {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  position: sticky;
+  top: 88px;
+}
+
+.checkout-summary div {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.checkout-comment-field {
+  color: #4b5563;
+  display: grid;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.checkout-summary > span {
+  color: #6b7280;
+}
+
+.checkout-summary strong {
+  color: #111827;
+  font-size: 18px;
+}
+
+.checkout-summary a {
+  color: #2563eb;
+  font-size: 14px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.checkout-summary a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  .checkout-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-summary {
+    position: static;
+  }
+}
