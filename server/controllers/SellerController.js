@@ -8,7 +8,7 @@ exports.getAllSellers = async (req, res) => {
     try {
         const sellers = await userModel
             .find({ type: 'sellerAccount' })
-            .select('email username storeName phone address type isActive shippingAddress flagCount');
+            .select('email username storeName phone address type isActive shippingAddress flagCount serviceArea');
 
         res.json({ success: true, result: sellers });
     } catch (error) {
@@ -113,6 +113,39 @@ exports.getMyFlags = async (req, res) => {
             .sort({ createdAt: -1 });
 
         res.json({ success: true, flags: flags });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+exports.updateServiceArea = async (req, res) => {
+    try {
+        const { serviceArea } = req.body;
+
+        if (!Array.isArray(serviceArea)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'serviceArea must be an array of areas' 
+            });
+        }
+
+        
+        const serviceabilityBonus = serviceArea.length >= 3 ? 5 : 0;
+
+        const seller = await userModel.findByIdAndUpdate(
+            req.userInfo.userId,
+            { serviceArea, serviceabilityBonus },
+            { new: true }
+        );
+
+        return res.json({
+            success: true,
+            message: serviceabilityBonus > 0 
+                ? `Service area updated! You earned serviceability Discount!`
+                : 'Service area updated.',
+            serviceArea: seller.serviceArea,
+            serviceabilityBonus: seller.serviceabilityBonus
+        });
+
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

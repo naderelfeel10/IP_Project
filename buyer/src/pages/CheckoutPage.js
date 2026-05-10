@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined } from '@ant-design/icons';
-import { Button, Input } from 'antd';
+import { Button, Input, Select } from 'antd';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import API from '../api';
@@ -12,7 +12,7 @@ const getProductId = (item) => {
 };
 
 const getProduct = (item) => {
-    if(typeof item.productId === 'object'){
+    if (typeof item.productId === 'object') {
         return item.productId;
     }
 
@@ -23,15 +23,27 @@ const formatPrice = (price) => {
     return `${price || 0} EGP`;
 };
 
+const getSellerServiceAreas = (items) => {
+    const areas = items.flatMap((item) => {
+        const product = getProduct(item);
+        return product?.sellerId?.serviceArea || [];
+    });
+
+    return [...new Set(areas)];
+};
+
 function CheckoutPage() {
     const navigate = useNavigate();
     const [items, setItems] = useState([]);
     const [totalPrice, setTotalPrice] = useState(0);
-    const [shippingAddress, setShippingAddress] = useState('');
+    const [shippingCity, setShippingCity] = useState('');
+    const [deliveryAddress, setDeliveryAddress] = useState('');
     const [buyerComment, setBuyerComment] = useState('');
     const [loading, setLoading] = useState(true);
     const [placingOrder, setPlacingOrder] = useState(false);
     const [error, setError] = useState('');
+
+    const serviceAreas = getSellerServiceAreas(items);
 
     useEffect(() => {
         const loadCheckout = async () => {
@@ -57,15 +69,30 @@ function CheckoutPage() {
         const nextCart = cart || { itemsList: [], totalPrice: 0 };
         setItems(nextCart.itemsList || []);
         setTotalPrice(nextCart.totalPrice || 0);
+
+        const nextServiceAreas = getSellerServiceAreas(nextCart.itemsList || []);
+        if (shippingCity && !nextServiceAreas.includes(shippingCity)) {
+            setShippingCity('');
+        }
     };
 
     const handlePlaceOrder = async () => {
-        if(!shippingAddress.trim()){
-            toast.error('Delivery address is required');
+        if (!shippingCity) {
+            toast.error('Please select a delivery city');
             return;
         }
 
-        if(items.length === 0){
+        if (!serviceAreas.includes(shippingCity)) {
+            toast.error('This delivery city is not available for this seller');
+            return;
+        }
+
+        if (!deliveryAddress.trim()) {
+            toast.error('Please enter the delivery address');
+            return;
+        }
+
+        if (items.length === 0) {
             toast.error('Cart is empty');
             return;
         }
@@ -74,12 +101,14 @@ function CheckoutPage() {
         setError('');
 
         try {
+            const fullShippingAddress = `${shippingCity} - ${deliveryAddress.trim()}`;
+
             const res = await API.post('/orders/addOrder/', {
                 itemList: items.map((item) => ({
                     productId: getProductId(item),
                     quantity: item.quantity
                 })),
-                shippingAddress: shippingAddress.trim(),
+                shippingAddress: fullShippingAddress,
                 buyerComment: buyerComment.trim(),
                 stockAlreadyReserved: true
             });
@@ -130,12 +159,16 @@ function CheckoutPage() {
             <section className="page-header">
                 <h1>Checkout</h1>
             </section>
+
             <section className="checkout-content">
                 {loading && <p className="products-message">Loading checkout...</p>}
+
                 {error && <p className="products-message error">{error}</p>}
+
                 {!loading && items.length === 0 && (
                     <p className="products-message">Your cart is empty.</p>
                 )}
+
                 {!loading && items.length > 0 && (
                     <div className="checkout-layout">
                         <section className="checkout-items">
@@ -148,7 +181,11 @@ function CheckoutPage() {
                                     <article className="checkout-item" key={productId}>
                                         <div>
                                             <strong>{product?.name || 'Product'}</strong>
-                                            <div className="checkout-quantity-controls" aria-label={`Quantity for ${product?.name || 'Product'}`}>
+
+                                            <div
+                                                className="checkout-quantity-controls"
+                                                aria-label={`Quantity for ${product?.name || 'Product'}`}
+                                            >
                                                 <Button
                                                     aria-label="Decrease quantity"
                                                     onClick={() => handleDecrementItem(productId)}
@@ -157,7 +194,9 @@ function CheckoutPage() {
                                                 >
                                                     -
                                                 </Button>
+
                                                 <span>{item.quantity}</span>
+
                                                 <Button
                                                     aria-label="Increase quantity"
                                                     onClick={() => handleIncrementItem(productId)}
@@ -167,12 +206,15 @@ function CheckoutPage() {
                                                     +
                                                 </Button>
                                             </div>
+
                                             {product?.deliveryTimeEstimate && (
                                                 <span>{product.deliveryTimeEstimate}</span>
                                             )}
                                         </div>
+
                                         <div className="checkout-item-actions">
                                             <strong>{formatPrice(itemTotal)}</strong>
+
                                             <Button
                                                 aria-label="Remove item"
                                                 className="checkout-trash-button"
@@ -187,15 +229,36 @@ function CheckoutPage() {
                                 );
                             })}
                         </section>
+
                         <aside className="checkout-summary">
                             <label className="checkout-comment-field">
-                                Delivery address
-                                <Input
-                                    onChange={(e) => setShippingAddress(e.target.value)}
-                                    placeholder="Delivery address"
-                                    value={shippingAddress}
+                                Delivery city
+                                <Select
+                                    disabled={serviceAreas.length === 0}
+                                    onChange={setShippingCity}
+                                    options={serviceAreas.map((area) => ({
+                                        label: area,
+                                        value: area
+                                    }))}
+                                    placeholder="Select delivery city"
+                                    value={shippingCity || undefined}
                                 />
                             </label>
+
+                            <label className="checkout-comment-field">
+                                Address in this city
+                                <Input
+                                    disabled={!shippingCity}
+                                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                                    placeholder="Street, building, apartment"
+                                    value={deliveryAddress}
+                                />
+                            </label>
+
+                            {serviceAreas.length === 0 && (
+                                <span>No delivery locations are available for this seller.</span>
+                            )}
+
                             <label className="checkout-comment-field">
                                 Comment
                                 <Input.TextArea
@@ -205,18 +268,22 @@ function CheckoutPage() {
                                     value={buyerComment}
                                 />
                             </label>
+
                             <div>
                                 <span>Total</span>
                                 <strong>{formatPrice(totalPrice)}</strong>
                             </div>
+
                             <Button
                                 block
+                                disabled={serviceAreas.length === 0}
                                 loading={placingOrder}
                                 onClick={handlePlaceOrder}
                                 type="primary"
                             >
                                 Place order
                             </Button>
+
                             <Link to="/">Continue shopping</Link>
                         </aside>
                     </div>

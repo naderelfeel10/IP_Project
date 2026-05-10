@@ -1,7 +1,98 @@
 import { useEffect, useState } from 'react';
 import API from '../api';
 
-function ProfilePage() {
+const AREAS = [
+    'Cairo', 'Giza', 'Alexandria', 'Mansoura',
+    'Tanta', 'Aswan', 'Luxor', 'Suez',
+    'Ismailia', 'Hurghada', 'Sharm El Sheikh', 'Zagazig'
+];
+
+function ServiceAreaSection() {
+    const [selected, setSelected] = useState([]);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        API.get('/seller/getProfile').then(res => {
+            setSelected(res.data.seller.serviceArea || []);
+        }).catch(() => {});
+    }, []);
+
+    const toggleArea = (area) => {
+        setSelected(prev =>
+            prev.includes(area)
+                ? prev.filter(a => a !== area)
+                : [...prev, area]
+        );
+    };
+
+    const save = async () => {
+        setMessage('');
+        setError('');
+        try {
+            const res = await API.patch('/seller/serviceArea', { serviceArea: selected });
+            setMessage(res.data.message);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Cannot update service area');
+        }
+    };
+
+    return (
+        <>
+            {message && <p style={{ color: 'green', fontSize: '13px', marginBottom: '10px' }}>{message}</p>}
+            {error && <p style={{ color: 'red', fontSize: '13px', marginBottom: '10px' }}>{error}</p>}
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                {AREAS.map(area => (
+                    <div
+                        key={area}
+                        onClick={() => toggleArea(area)}
+                        style={{
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            border: '1px solid',
+                            borderColor: selected.includes(area) ? '#1565c0' : '#ccc',
+                            background: selected.includes(area) ? '#e3f2fd' : '#fff',
+                            color: selected.includes(area) ? '#1565c0' : '#555',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            fontWeight: selected.includes(area) ? '600' : '400',
+                            userSelect: 'none'
+                        }}
+                    >
+                        {area}
+                    </div>
+                ))}
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#888', marginBottom: '12px' }}>
+                Selected: {selected.length} area{selected.length !== 1 ? 's' : ''}
+                {selected.length >= 3 && (
+                    <span style={{ color: 'green', fontWeight: '600' }}> — Discount earned! </span>
+                )}
+            </p>
+
+            <button
+                onClick={save}
+                style={{
+                    padding: '9px 18px',
+                    background: '#222',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                }}
+            >
+                Save service area
+            </button>
+        </>
+    );
+}
+
+
+function ProfilePage({ onLogout }) {
     const [form, setForm] = useState({
         username: '',
         storeName: '',
@@ -84,20 +175,20 @@ function ProfilePage() {
     };
 
     const updateEmail = async (e) => {
-    e.preventDefault();
-    setEmailMessage('');
-    setEmailError('');
-    try {
-        await API.patch('/auth/updateEmail', {
-            email: emailForm.newEmail,      // changed from newEmail to email
-            password: emailForm.password
-        });
-        setEmailMessage('Email updated successfully.');
-        setEmailForm({ newEmail: '', password: '' });
-    } catch (err) {
-        setEmailError(err.response?.data?.message || 'Cannot update email.');
-    }
-};
+        e.preventDefault();
+        setEmailMessage('');
+        setEmailError('');
+        try {
+            await API.patch('/auth/updateEmail', {
+                email: emailForm.newEmail,
+                password: emailForm.password
+            });
+            setEmailMessage('Email updated successfully.');
+            setEmailForm({ newEmail: '', password: '' });
+        } catch (err) {
+            setEmailError(err.response?.data?.message || 'Cannot update email.');
+        }
+    };
 
     const deleteAccount = async (e) => {
         e.preventDefault();
@@ -108,7 +199,8 @@ function ProfilePage() {
             });
             localStorage.removeItem('sellerToken');
             localStorage.removeItem('sellerUser');
-            window.location.reload();
+            if (onLogout) onLogout();
+            else window.location.reload();
         } catch (err) {
             setDeleteError(err.response?.data?.message || 'Cannot delete account.');
         }
@@ -179,6 +271,15 @@ function ProfilePage() {
                         Save profile
                     </button>
                 </form>
+            </div>
+
+            {/* ── Service Area ── */}
+            <div style={sectionStyle}>
+                <h3 style={h3Style}>Service area</h3>
+                <p style={{ fontSize: '13px', color: '#555', marginBottom: '14px' }}>
+                    Set the areas you deliver to. Cover <b>3 or more areas</b> to earn a <b>serviceability discount</b>!
+                </p>
+                <ServiceAreaSection />
             </div>
 
             {/* ── Change password ── */}

@@ -61,6 +61,14 @@ const userSchema = mongoose.Schema({
 	verificationCodeExpires: {
     	type: Date,
     	select: false,
+	},
+	serviceArea: {
+    type: [String],  // array of areas the seller can serve
+    default: []
+	},
+	serviceabilityBonus: {
+    type: Number,
+    default: 0  
 	}
 },
     {

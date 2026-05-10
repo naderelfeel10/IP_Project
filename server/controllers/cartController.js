@@ -210,7 +210,14 @@ exports.getCart = async (req, res) => {
 
         const cart = await cartModel
             .findOne({ buyerId: req.userInfo.userId })
-            .populate('itemsList.productId', 'name price deliveryTimeEstimate quantity');
+            .populate({
+                path: 'itemsList.productId',
+                select: 'name price deliveryTimeEstimate quantity sellerId',
+                populate: {
+                    path: 'sellerId',
+                    select: 'serviceArea'
+                }
+            });
 
         if (!cart || cart.itemsList.length === 0) {
             return res.json({ success:true, result: emptyCart(req.userInfo.userId) });
@@ -221,3 +228,4 @@ exports.getCart = async (req, res) => {
         res.status(500).json({ success:false, message:error.message });
     }
 };
+
