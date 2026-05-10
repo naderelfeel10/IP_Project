@@ -26,6 +26,25 @@ const groupProductsByCategory = (products) => {
     return groups;
 };
 
+const ProductImage = ({ product, className = '' }) => {
+    if(product.imageUrl){
+        return (
+            <img
+                alt={product.name}
+                className={`product-image ${className}`}
+                loading="lazy"
+                src={product.imageUrl}
+            />
+        );
+    }
+
+    return (
+        <div className={`product-image product-image-empty ${className}`} aria-hidden="true">
+            <span>{(product.name || 'P').charAt(0).toUpperCase()}</span>
+        </div>
+    );
+};
+
 function SellerProfilePage() {
     const { sellerId } = useParams();
     const [sellerName, setSellerName] = useState('');
@@ -90,14 +109,16 @@ function SellerProfilePage() {
                         <div className="product-grid">
                             {productsByCategory[category].map((product) => (
                                 <Link className="product-card product-clickable" key={product._id} to={`/products/${product._id}`}>
-                                    <h3>{product.name}</h3>
-                                    <p>{product.description || 'No description available.'}</p>
-                                    <div className="product-meta">
-                                        <span>{product.deliveryTimeEstimate || 'Delivery time unavailable'}</span>
-                                        <strong>{product.price} EGP</strong>
-                                    </div>
-                                    <div className="product-meta seller-product-meta">
-                                        <span>{formatRating(product.avgRating)}</span>
+                                    <ProductImage className="product-card-image" product={product} />
+                                    <div className="product-card-body">
+                                        <h3>{product.name}</h3>
+                                        <div className="product-meta">
+                                            <span>{product.deliveryTimeEstimate || 'Delivery time unavailable'}</span>
+                                            <strong>{product.price} EGP</strong>
+                                        </div>
+                                        <div className="product-meta seller-product-meta">
+                                            <span>{formatRating(product.avgRating)}</span>
+                                        </div>
                                     </div>
                                 </Link>
                             ))}

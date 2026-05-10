@@ -20,6 +20,24 @@ const getSellerId = (product) => {
     return typeof product.sellerId === 'object' ? product.sellerId._id : product.sellerId;
 };
 
+const ProductImage = ({ product }) => {
+    if(product.imageUrl){
+        return (
+            <img
+                alt={product.name}
+                className="details-product-image"
+                src={product.imageUrl}
+            />
+        );
+    }
+
+    return (
+        <div className="details-product-image details-product-image-empty" aria-hidden="true">
+            <span>{(product.name || 'P').charAt(0).toUpperCase()}</span>
+        </div>
+    );
+};
+
 function ProductDetailsPage() {
     const { productId } = useParams();
     const navigate = useNavigate();
@@ -49,7 +67,7 @@ function ProductDetailsPage() {
                 ]);
 
                 const sellerMap = (sellersRes.data.result || []).reduce((map, seller) => {
-                    map[seller._id] = seller.username || seller.email || 'Seller';
+                    map[seller._id] = seller.storeName || seller.username || seller.email || 'Seller';
                     return map;
                 }, {});
 
@@ -145,6 +163,7 @@ function ProductDetailsPage() {
                 {!loading && !error && product && (
                     <>
                         <section className="details-card">
+                            <ProductImage product={product} />
                             <div className="details-grid">
                                 <div>
                                     <span>Name</span>

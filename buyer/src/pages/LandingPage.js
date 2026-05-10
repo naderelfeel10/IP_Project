@@ -5,17 +5,30 @@ import API from '../api';
 import MainNav from '../components/MainNav';
 import './Products.css';
 
-const groupProductsByCategory = (products) => {
+const getSellerName = (sellerId, sellersById) => {
+    if(!sellerId){
+        return 'Unknown seller';
+    }
+
+    return sellersById[sellerId] || 'Seller';
+};
+
+const groupProductsBySeller = (products, sellersById) => {
     const groups = {};
 
     products.forEach((product) => {
-        const category = product.category || 'Other';
+        const sellerId = getSellerId(product);
+        const groupKey = sellerId || 'unknown-seller';
 
-        if(!groups[category]){
-            groups[category] = [];
+        if(!groups[groupKey]){
+            groups[groupKey] = {
+                sellerId,
+                sellerName: getSellerName(sellerId, sellersById),
+                products: []
+            };
         }
 
-        groups[category].push(product);
+        groups[groupKey].products.push(product);
     });
 
     return groups;
@@ -35,6 +48,25 @@ const formatRating = (rating) => {
     ) : 'No rating yet';
 };
 
+const ProductImage = ({ product, className = '' }) => {
+    if(product.imageUrl){
+        return (
+            <img
+                alt={product.name}
+                className={`product-image ${className}`}
+                loading="lazy"
+                src={product.imageUrl}
+            />
+        );
+    }
+
+    return (
+        <div className={`product-image product-image-empty ${className}`} aria-hidden="true">
+            <span>{(product.name || 'P').charAt(0).toUpperCase()}</span>
+        </div>
+    );
+};
+
 function LandingPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const search = searchParams.get('search') || '';
@@ -51,20 +83,20 @@ function LandingPage() {
     const [categoryOptions, setCategoryOptions] = useState([]);
     const [sellersById, setSellersById] = useState({});
     const [products, setProducts] = useState([]);
-    const [productsByCategory, setProductsByCategory] = useState({});
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [categoryProducts, setCategoryProducts] = useState([]);
+    const [productsBySeller, setProductsBySeller] = useState({});
+    const [selectedSeller, setSelectedSeller] = useState(null);
+    const [sellerProducts, setSellerProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [categoryLoading, setCategoryLoading] = useState(false);
+    const [sellerLoading, setSellerLoading] = useState(false);
     const [error, setError] = useState('');
-    const [categoryError, setCategoryError] = useState('');
+    const [sellerError, setSellerError] = useState('');
 
     useEffect(() => {
         const loadSellers = async () => {
             try {
                 const res = await API.get('/seller/getAllSellers');
                 const sellersMap = (res.data.result || []).reduce((map, seller) => {
-                    map[seller._id] = seller.username || seller.email || 'Seller';
+                    map[seller._id] = seller.storeName || seller.username || seller.email || 'Seller';
                     return map;
                 }, {});
 
@@ -94,9 +126,9 @@ function LandingPage() {
         const loadProducts = async () => {
             setLoading(true);
             setError('');
-            setSelectedCategory('');
-            setCategoryProducts([]);
-            setCategoryError('');
+            setSelectedSeller(null);
+            setSellerProducts([]);
+            setSellerError('');
 
             try {
                 const params = {};
@@ -111,7 +143,7 @@ function LandingPage() {
                 });
                 const result = res.data.result || [];
                 setProducts(result);
-                setProductsByCategory(groupProductsByCategory(result));
+                setProductsBySeller(groupProductsBySeller(result, sellersById));
             } catch (err) {
                 setError(err.response?.data?.message || 'Failed to load products');
             } finally {
@@ -120,7 +152,7 @@ function LandingPage() {
         };
 
         loadProducts();
-    }, [search, categoryFilter, sellerFilter, priceFromFilter, priceUpToFilter]);
+    }, [search, categoryFilter, sellerFilter, priceFromFilter, priceUpToFilter, sellersById]);
 
     useEffect(() => {
         setFilterValues({
@@ -131,29 +163,34 @@ function LandingPage() {
         });
     }, [categoryFilter, sellerFilter, priceFromFilter, priceUpToFilter]);
 
-    const categories = Object.keys(productsByCategory);
+    const sellerGroups = Object.values(productsBySeller);
 
-    const handleViewMore = async (category) => {
-        setSelectedCategory(category);
-        setCategoryLoading(true);
-        setCategoryError('');
+    const handleViewMore = async (sellerGroup) => {
+        setSelectedSeller(sellerGroup);
+        setSellerLoading(true);
+        setSellerError('');
 
         try {
+            if(!sellerGroup.sellerId){
+                setSellerProducts(sellerGroup.products);
+                return;
+            }
+
             const res = await API.get('/products', {
-                params: { category }
+                params: { seller: sellerGroup.sellerId }
             });
-            setCategoryProducts(res.data.result || []);
+            setSellerProducts(res.data.result || []);
         } catch (err) {
-            setCategoryError(err.response?.data?.message || 'Failed to load category products');
+            setSellerError(err.response?.data?.message || 'Failed to load store products');
         } finally {
-            setCategoryLoading(false);
+            setSellerLoading(false);
         }
     };
 
-    const handleBackToCategories = () => {
-        setSelectedCategory('');
-        setCategoryProducts([]);
-        setCategoryError('');
+    const handleBackToStores = () => {
+        setSelectedSeller(null);
+        setSellerProducts([]);
+        setSellerError('');
     };
 
     const updateFilter = (name, value) => {
@@ -206,28 +243,28 @@ function LandingPage() {
         <main className="page-shell">
             <MainNav />
             <section className="page-header">
-                <h1>{selectedCategory || (search ? `Search results for "${search}"` : 'Products')}</h1>
+                <h1>{selectedSeller?.sellerName || (search ? `Search results for "${search}"` : 'Products')}</h1>
             </section>
             <section className="products-content">
-                {selectedCategory && (
+                {selectedSeller && (
                     <div className="category-list-view">
                         <div className="category-header">
-                            <h2>All {selectedCategory} products</h2>
-                            <Button onClick={handleBackToCategories} type="default">Back</Button>
+                            <h2>All {selectedSeller.sellerName} products</h2>
+                            <Button onClick={handleBackToStores} type="default">Back</Button>
                         </div>
-                        {categoryLoading && <p className="products-message">Loading {selectedCategory} products...</p>}
-                        {categoryError && <p className="products-message error">{categoryError}</p>}
-                        {!categoryLoading && !categoryError && categoryProducts.length === 0 && (
-                            <p className="products-message">No products found in this category.</p>
+                        {sellerLoading && <p className="products-message">Loading {selectedSeller.sellerName} products...</p>}
+                        {sellerError && <p className="products-message error">{sellerError}</p>}
+                        {!sellerLoading && !sellerError && sellerProducts.length === 0 && (
+                            <p className="products-message">No products found for this store.</p>
                         )}
-                        {!categoryLoading && !categoryError && categoryProducts.length > 0 && (
+                        {!sellerLoading && !sellerError && sellerProducts.length > 0 && (
                             <div className="product-list">
-                                {categoryProducts.map((product) => (
+                                {sellerProducts.map((product) => (
                                     <Link className="product-list-item product-clickable" key={product._id} to={`/products/${product._id}`}>
-                                            <div>
+                                            <ProductImage product={product} />
+                                            <div className="product-list-details">
                                                 <h3>{product.name}</h3>
                                                 {renderSellerLink(product)}
-                                                <p>{product.description || 'No description available.'}</p>
                                                 <span>{product.deliveryTimeEstimate || 'Delivery time unavailable'} · {formatRating(product.avgRating)}</span>
                                             </div>
                                         <strong>{product.price} EGP</strong>
@@ -237,7 +274,7 @@ function LandingPage() {
                         )}
                     </div>
                 )}
-                {!selectedCategory && (
+                {!selectedSeller && (
                     <>
                 {!search && loading && <p className="products-message">Loading products...</p>}
                 {!search && error && <p className="products-message error">{error}</p>}
@@ -312,10 +349,10 @@ function LandingPage() {
                                 <div className="product-list">
                                     {products.map((product) => (
                                         <Link className="product-list-item product-clickable" key={product._id} to={`/products/${product._id}`}>
-                                            <div>
+                                            <ProductImage product={product} />
+                                            <div className="product-list-details">
                                                 <h3>{product.name}</h3>
                                                 {renderSellerLink(product)}
-                                                <p>{product.description || 'No description available.'}</p>
                                                 <span>{product.category || 'Other'} · {product.deliveryTimeEstimate || 'Delivery time unavailable'} · {formatRating(product.avgRating)}</span>
                                             </div>
                                             <strong>{product.price} EGP</strong>
@@ -326,27 +363,29 @@ function LandingPage() {
                         </div>
                     </div>
                 )}
-                {!loading && !error && !search && categories.length === 0 && (
+                {!loading && !error && !search && sellerGroups.length === 0 && (
                     <p className="products-message">No products found.</p>
                 )}
-                {!loading && !error && !search && categories.map((category) => (
-                    <div className="category-section" key={category}>
+                {!loading && !error && !search && sellerGroups.map((sellerGroup) => (
+                    <div className="category-section" key={sellerGroup.sellerId || 'unknown-seller'}>
                         <div className="category-header">
-                            <h2>{category}</h2>
-                            <Button onClick={() => handleViewMore(category)} type="default">View more</Button>
+                            <h2>{sellerGroup.sellerName}</h2>
+                            <Button onClick={() => handleViewMore(sellerGroup)} type="default">View more</Button>
                         </div>
                         <div className="product-grid">
-                            {productsByCategory[category].map((product) => (
+                            {sellerGroup.products.map((product) => (
                                 <Link className="product-card product-clickable" key={product._id} to={`/products/${product._id}`}>
-                                    <h3>{product.name}</h3>
-                                    {renderSellerLink(product)}
-                                    <p>{product.description || 'No description available.'}</p>
-                                    <div className="product-meta">
-                                        <span>{product.deliveryTimeEstimate || 'Delivery time unavailable'}</span>
-                                        <strong>{product.price} EGP</strong>
-                                    </div>
-                                    <div className="product-meta seller-product-meta">
-                                        <span>{formatRating(product.avgRating)}</span>
+                                    <ProductImage className="product-card-image" product={product} />
+                                    <div className="product-card-body">
+                                        <h3>{product.name}</h3>
+                                        {renderSellerLink(product)}
+                                        <div className="product-meta">
+                                            <span>{product.deliveryTimeEstimate || 'Delivery time unavailable'}</span>
+                                            <strong>{product.price} EGP</strong>
+                                        </div>
+                                        <div className="product-meta seller-product-meta">
+                                            <span>{formatRating(product.avgRating)}</span>
+                                        </div>
                                     </div>
                                 </Link>
                             ))}

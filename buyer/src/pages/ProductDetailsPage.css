@@ -12,6 +12,24 @@
   overflow: hidden;
 }
 
+.details-product-image {
+  aspect-ratio: 21 / 9;
+  background: #f3f4f6;
+  border-bottom: 1px solid #eef2f7;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.details-product-image-empty {
+  align-items: center;
+  color: #6b7280;
+  display: flex;
+  font-size: 48px;
+  font-weight: 700;
+  justify-content: center;
+}
+
 .details-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

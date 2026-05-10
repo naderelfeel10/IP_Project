@@ -99,6 +99,19 @@
   text-decoration: underline;
 }
 
+.checkout-quantity-controls {
+  align-items: center;
+  display: flex !important;
+  gap: 6px;
+}
+
+.checkout-quantity-controls span {
+  color: #374151;
+  font-size: 13px;
+  min-width: 22px;
+  text-align: center;
+}
+
 .order-total {
   border-top: 1px solid #eef2f7;
   padding-top: 12px;

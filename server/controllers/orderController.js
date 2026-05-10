@@ -30,7 +30,6 @@ exports.addOrder = async (req, res) => {
             return res.status(400).json({ success: false, message: 'order items are required' });
         }
 
-        let totalPrice = 0;
         let cart = null;
 
         if (stockAlreadyReserved) {
@@ -41,20 +40,29 @@ exports.addOrder = async (req, res) => {
             }
         }
 
+        const orderGroupsBySeller = {};
+
         for (const item of items) {
-            const product = await productModel.findById(item.productId);
+            const productId = item.productId;
+            const quantity = Number(item.quantity || 1);
+
+            if (!productId || quantity < 1) {
+                return res.status(400).json({ success: false, message: 'valid product and quantity are required' });
+            }
+
+            const product = await productModel.findById(productId);
 
             if (!product) {
                 return res.status(404).json({ success: false, message: 'product not found' });
             }
 
-            if (!stockAlreadyReserved && product.quantity < item.quantity) {
+            if (!stockAlreadyReserved && product.quantity < quantity) {
                 return res.status(400).json({ success: false, message: `${product.name} is out of stock` });
             }
 
             if (stockAlreadyReserved) {
                 const reservedItem = cart.itemsList.find((cartItem) => (
-                    cartItem.productId.equals(item.productId) && cartItem.quantity >= item.quantity
+                    cartItem.productId.equals(productId) && cartItem.quantity >= quantity
                 ));
 
                 if (!reservedItem) {
@@ -62,33 +70,54 @@ exports.addOrder = async (req, res) => {
                 }
             }
 
-            totalPrice += product.price * item.quantity;
+            const sellerId = product.sellerId.toString();
+
+            if (!orderGroupsBySeller[sellerId]) {
+                orderGroupsBySeller[sellerId] = {
+                    itemsList: [],
+                    totalPrice: 0
+                };
+            }
+
+            orderGroupsBySeller[sellerId].itemsList.push({
+                productId: product._id,
+                quantity: quantity
+            });
+            orderGroupsBySeller[sellerId].totalPrice += product.price * quantity;
         }
 
         if (!stockAlreadyReserved) {
             for (const item of items) {
                 await productModel.updateOne(
                     { _id: item.productId },
-                    { $inc: { quantity: -item.quantity } }
+                    { $inc: { quantity: -Number(item.quantity || 1) } }
                 );
             }
         }
 
-        const order = await orderModel.create({
-            buyerId: req.userInfo.userId,
-            itemsList: items,
-            totalPrice: totalPrice,
-            shippingAddress: shippingAddress,
-            buyerComment: buyerComment,
-            orderComment: buyerComment,
-            statusHistory: [{ status: 'Pending' }]
-        });
+        const orders = await orderModel.insertMany(
+            Object.values(orderGroupsBySeller).map((sellerOrder) => ({
+                buyerId: req.userInfo.userId,
+                itemsList: sellerOrder.itemsList,
+                totalPrice: sellerOrder.totalPrice,
+                shippingAddress: shippingAddress,
+                buyerComment: buyerComment,
+                orderComment: buyerComment,
+                statusHistory: [{ status: 'Pending' }]
+            }))
+        );
 
         if (stockAlreadyReserved) {
             await cartModel.deleteOne({ buyerId: req.userInfo.userId });
         }
 
-        res.status(201).json({ success: true, message: 'order added', order: order, result: order });
+        res.status(201).json({
+            success: true,
+            message: orders.length === 1 ? 'order added' : 'orders added',
+            order: orders[0],
+            orders: orders,
+            result: orders.length === 1 ? orders[0] : orders
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
